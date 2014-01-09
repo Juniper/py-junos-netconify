@@ -5,7 +5,6 @@ sys.path.insert(0,'lib')
 from setuptools import setup, find_packages
 
 requirements = [ 'jinja2', 'lxml', 'pyserial']
-                 
 
 setup(
     name = "junos-netconify",
