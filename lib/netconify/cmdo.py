@@ -44,8 +44,8 @@ class netconifyCmdo(object):
       dest='dry_run_mode',
       help='dry-run builds the config only')
 
-    p.add_argument('--save', nargs='?', dest='save_conf_path',
-      help="save a copy the NOOB conf file")
+    p.add_argument('--savedir', 
+      help="save a copy the NOOB conf file into this directory")
 
     ## ------------------------------------------------------------------------
     ## Explicit controls to select the NOOB conf file, vs. netconify
@@ -114,8 +114,6 @@ class netconifyCmdo(object):
 
       # save the generated conf file if needed
 
-      if self._args.save_conf_path is not None:
-        self._conf_save()
 
     except RuntimeError as rterr:
       self._err_hanlder(rterr)
@@ -197,10 +195,9 @@ class netconifyCmdo(object):
       model = self._tty.nc.facts.items['model']
       path = os.path.join(self._args.prefix, 'skel', model+'.conf')
 
-    # now build the conf file
+    # now build the conf file, and ensure that it will get saved
+    if not self._args.savedir: self._args.savedir = '.'    
     self._conf_build(path)
-    if not self._args.save_conf_path:
-      self._args.save_conf_path = (self._name or 'noob')+'.conf'
 
   ### -------------------------------------------------------------------------
   ### configuration file build/save methods
@@ -225,10 +222,14 @@ class netconifyCmdo(object):
     conf = open(path,'r').read()    
     self.conf = jinja2.Template(conf).render(self._namevars)
 
+    if self._args.savedir is not None:
+      self._conf_save()
+
   def _conf_save(self):
-    of_name = self._args.save_conf_path or self._name+'.conf'
-    self._notify('conf','saving: {}'.format(of_name))
-    with open(of_name,'w+') as f: f.write(self.conf)
+    fname = (self._name or 'noob')+'.conf'
+    path = os.path.join(self._args.savedir, fname)
+    self._notify('conf','saving: {}'.format(path))
+    with open(path,'w+') as f: f.write(self.conf)
 
   ### -------------------------------------------------------------------------
   ### load the inventory file
