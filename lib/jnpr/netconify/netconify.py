@@ -59,7 +59,7 @@ class netconify(object):
 
     prompt,found = self.read(expect)
 
-    print "IN:{}: {}".format(found, prompt)
+#    print "IN:{}: {}".format(found, prompt)
 
     def _ev_login():
       self.write(self.user)
@@ -91,7 +91,7 @@ class netconify(object):
       return True
     else:
       # if we are here, then loop the event again
-      print "OUT:{}".format(expect.pattern)
+#      print "OUT:{}".format(expect.pattern)
       self._login_state_machine(expect, attempt+1)
 
   def login(self, attempt = 0):
