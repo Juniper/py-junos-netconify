@@ -1,6 +1,6 @@
-from jnpr.netconify import  *
+import jnpr.netconify
 
-tty = netconify(user='root', passwd='juniper123')
+tty = jnpr.netconify.Serial(user='root', passwd='juniper123')
 tty.login()
 
 # ... do stuff ...

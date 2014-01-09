@@ -1,6 +1,7 @@
 import pdb
 
 import re, time
+import jinja2
 from lxml import etree
 from lxml.builder import E
 
@@ -84,6 +85,14 @@ class xmlmode_netconf(object):
     """
     action = kvargs.get('action','override')
     conf_text = open(path,'r').read()    
+
+    tvars = kvargs.get('vars')
+    if tvars is not None:
+      # this indicates that path is a jinja2 template,
+      # so we need to Templatize the file and redner the 
+      # variables into it.
+      conf_text = jinja2.Template(conf_text).render(tvars)
+
     cmd = E('load-configuration', dict(format='text',action=action),
       E('configuration-text', conf_text )
     )

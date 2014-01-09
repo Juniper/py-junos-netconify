@@ -5,10 +5,10 @@ from datetime import datetime, timedelta
 
 from .xmlmode import xmlmode_netconf
 
-__all__ = ['netconify']
+__all__ = ['Serial']
 
 ##### =========================================================================
-##### netconify class
+##### Serial class
 ##### =========================================================================
 
 _RE_PAT_login = '(?P<login>ogin:)\s*'
@@ -20,18 +20,18 @@ _RE_login = re.compile(_RE_PAT_login)
 _RE_shell = re.compile(_RE_PAT_shell)
 _RE_passwd_or_shell = re.compile("{}|{}$".format(_RE_PAT_passwd,_RE_PAT_shell))
 
-class netconify(object):
+class Serial(object):
   """
-  netconify is used to bootstrap Junos New Out of the Box (NOOB) device
+  Serial is used to bootstrap Junos New Out of the Box (NOOB) device
   over the CONSOLE port.  The general use-case is to setup the minimal
   configuration so that the device is IP reachable using SSH
   and NETCONF for remote management.
 
-  netconify is needed for Junos devices that do not support
+  Serial is needed for Junos devices that do not support
   the DHCP 'auto-installation' or 'ZTP' feature; i.e. you *MUST*
   to the NOOB configuration via the CONSOLE.  
 
-  netconify is also useful for situations even when the Junos
+  Serial is also useful for situations even when the Junos
   device supports auto-DHCP, but is not an option due to the
   specific situation
   """
