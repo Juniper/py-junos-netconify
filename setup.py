@@ -9,7 +9,7 @@ setup(
     version = "0.0.2",
     author = "Jeremy Schulman",
     author_email = "nwkautomaniac@gmain.com",
-    description = ( "Junos console/bootstrap automation")
+    description = ( "Junos console/bootstrap automation"),
     license = "Apache 2.0",
     keywords = "Junos NETCONF NOOB automation networking",
     url = "http://www.github.com/jeremyschulman/py-junos-netconify",
