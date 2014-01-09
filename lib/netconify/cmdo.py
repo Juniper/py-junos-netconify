@@ -76,9 +76,11 @@ class netconifyCmdo(object):
       help='login user name')
 
     p.add_argument('-p','--passwd', default='',
-      help='login user password. Alternatively use -k option to prompt')
+      help='login user password, alternatively use -k option to prompt')
 
-    p.add_argument('-k', action='store_true', dest='passwd_prompt', default=False)
+    p.add_argument('-k', action='store_true', default=False,
+      dest='passwd_prompt', 
+      help='prompt for password')
 
   ### -------------------------------------------------------------------------
   ### run command line tool
@@ -107,12 +109,13 @@ class netconifyCmdo(object):
 
       if self._args.dry_run_mode is True:
         self._dry_run()
-        sys.exit(0)        
+      else:
+        self._netconify()
 
-      # login to the NOOB over the serial port and perform the 
-      # needed configuration
+      # save the generated conf file if needed
 
-      self._netconify()
+      if self._args.save_conf_path is not None:
+        self._conf_save()
 
     except RuntimeError as rterr:
       self._err_hanlder(rterr)
@@ -175,18 +178,10 @@ class netconifyCmdo(object):
   ### -------------------------------------------------------------------------
 
   def _dry_run(self):
-    # if we're giving the EXPLICIT information so we don't need to connect
-    # to the device over the console, then simply use the information we've
-    # got and build the config.
+    # see if our config path can be determined from the args, rather
+    # than going to the device for model information.
 
-    # start with checking for an explicit path to a conf file
-    path = self._args.EXPLICIT_conf
-
-    # and then check for a model reference
-
-    expl_model = self._args.EXPLICIT_model or self._namevars.get('--model')
-    if path is None and expl_model is not None:
-      path = os.path.join(self._args.prefix, 'skel', expl_model+'.conf')
+    path = self._conf_fromargs()
 
     # if we have a path, then we don't need to connect to the device
     # to get the information needed to build the device.
@@ -202,8 +197,26 @@ class netconifyCmdo(object):
       model = self._tty.nc.facts.items['model']
       path = os.path.join(self._args.prefix, 'skel', model+'.conf')
 
+    # now build the conf file
     self._conf_build(path)
-    self._conf_save()
+    if not self._args.save_conf_path:
+      self._args.save_conf_path = (self._name or 'noob')+'.conf'
+
+  ### -------------------------------------------------------------------------
+  ### configuration file build/save methods
+  ### -------------------------------------------------------------------------
+
+  def _conf_fromargs(self):
+    # start with checking for an explicit path to a conf file
+    path = self._args.EXPLICIT_conf
+
+    # and then check for a model reference
+
+    expl_model = self._args.EXPLICIT_model or self._namevars.get('--model')
+    if path is None and expl_model is not None:
+      path = os.path.join(self._args.prefix, 'skel', expl_model+'.conf')
+
+    return path
 
   def _conf_build(self, path):
     if not os.path.isfile(path):
