@@ -21,7 +21,7 @@ class xmlmode_netconf(object):
   """  
   def __init__(self, serial):
     """
-    :serial: is an open serial.Serial object 
+    :serial: is serial.Serial object 
     """
     self._ser = serial
     self.hello = None
@@ -111,4 +111,5 @@ class xmlmode_netconf(object):
 
   def close(self):
     """ issue the XML API to close the session """
-    self._ser.write('<close-session/>\n')
+    self._ser.write('<rpc><close-session/></rpc>')
+    self._ser.flush()
