@@ -125,7 +125,7 @@ class Serial(object):
 
     prompt,found = self.read(expect)
 
-    print "IN:{}: {}".format(found, prompt)
+#    print "IN:{}: {}".format(found, prompt)
 
     def _ev_login():
       self.state = self._ST_LOGIN
@@ -149,7 +149,7 @@ class Serial(object):
         raise RuntimeError('login_failed')
 
     def _ev_shell():
-      print "DEBUG:{}".format(prompt)
+#      print "DEBUG:{}".format(prompt)
       self.state = self._ST_DONE      
       # if we are here, then we are done
       return None
@@ -166,7 +166,7 @@ class Serial(object):
       return True
     else:
       # if we are here, then loop the event again
-      print "OUT:{}".format(expect.pattern)
+#      print "OUT:{}".format(expect.pattern)
       self._login_state_machine(expect, attempt+1)
 
 

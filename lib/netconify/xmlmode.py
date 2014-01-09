@@ -59,41 +59,15 @@ class xmlmode_netconf(object):
 
     self.hello = self._receive()
 
-  def gather_facts(self):
-    self.facts.gather()
-
-  def load(self, path, **kvargs):
+  def load(self, content, **kvargs):
     """
     load-override a Junos 'conf'-style file into the device.  if the
     load is successful, return :True:, otherwise return the XML reply
     structure for further processing
-
-    :path:
-      path to Junos conf-style text file on the local system.  this
-      file could be a Jinja2 template file; and if so you should
-      provide vars=<dict> on the call
-
-    :kvargs['action']:
-      determines the load mode.  this is 'override' by default.
-      you could set this to merge or replace to perform those actions
-
-    :kvargs['vars']:
-      a <dict> of variables.  when this is given, the assumption is
-      the conf file is a jinja2 template.  the variables will be 
-      rendered into the template before loading into the device.
     """
     action = kvargs.get('action','override')
-    conf_text = open(path,'r').read()    
-
-    tvars = kvargs.get('vars')
-    if tvars is not None:
-      # this indicates that path is a jinja2 template,
-      # so we need to Templatize the file and redner the 
-      # variables into it.
-      conf_text = jinja2.Template(conf_text).render(tvars)
-
     cmd = E('load-configuration', dict(format='text',action=action),
-      E('configuration-text', conf_text )
+      E('configuration-text', content )
     )
     rsp = self.rpc(etree.tostring(cmd))
     return rsp if rsp.findtext('.//ok') is None else True

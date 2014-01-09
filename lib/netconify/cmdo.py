@@ -11,7 +11,6 @@ import netconify
 class netconifyCmdo(object):
   PREFIX = '/etc/netconify'
   INVENTORY = 'hosts'                    # in PREFIX
-  DRYRUN_NOOB_CONF = 'noob.conf'         #
 
   ### -------------------------------------------------------------------------
   ### CONSTRUCTOR
@@ -41,9 +40,12 @@ class netconifyCmdo(object):
     p.add_argument('-i','--inventory', 
       help='inventory file of named NOOB devices and variables')
 
-    p.add_argument('--dry-run', nargs='?', dest='dry_run_path', 
-      const=self.DRYRUN_NOOB_CONF,      # default value ...
-      help="dry-run builds the config only, provide filename")
+    p.add_argument('--dry-run', action='store_true', default=False,
+      dest='dry_run_mode',
+      help='dry-run builds the config only')
+
+    p.add_argument('--save', nargs='?', dest='save_conf_path',
+      help="save a copy the NOOB conf file")
 
     ## ------------------------------------------------------------------------
     ## Explicit controls to select the NOOB conf file, vs. netconify
@@ -103,7 +105,7 @@ class netconifyCmdo(object):
 
       # handle dry-run mode and exit 
 
-      if self._args.dry_run_path is not None:
+      if self._args.dry_run_mode is True:
         self._dry_run()
         sys.exit(0)        
 
@@ -126,6 +128,9 @@ class netconifyCmdo(object):
   def _tty_notifier(tty, event, message):
     print "TTY:{}:{}".format(event,message)
 
+  def _notify(self, event, message):
+    print "CMD:{}:{}".format(event,message)
+
   def _tty_login(self):
     serargs = {}
     serargs['port'] = self._args.port
@@ -145,6 +150,24 @@ class netconifyCmdo(object):
 
   def _netconify(self):
     self._tty_login()
+    self._tty.nc.facts.gather()
+
+    model = self._tty.nc.facts.items['model']
+    path = os.path.join(self._args.prefix, 'skel', model+'.conf')
+
+    self._notify('conf','building from: {}'.format(path))
+    self._conf_build(path)
+    self._notify('conf','loading into device ...')
+
+    rc = self._tty.nc.load(content=self.conf)
+    if rc is not True:
+      raise RuntimeError('load_error')
+
+    self._notify('conf','commit ... please be patient')
+    rc = self._tty.nc.commit()
+    if rc is not True:
+      raise RuntimeError('commit_error')
+
     self._tty_logout()
 
   ### -------------------------------------------------------------------------
@@ -177,7 +200,6 @@ class netconifyCmdo(object):
       self._tty_logout()
 
       model = self._tty.nc.facts.items['model']
-      print "DEUBG: model is: {}".format(model)
       path = os.path.join(self._args.prefix, 'skel', model+'.conf')
 
     self._conf_build(path)
@@ -191,9 +213,9 @@ class netconifyCmdo(object):
     self.conf = jinja2.Template(conf).render(self._namevars)
 
   def _conf_save(self):
-    print "DEBUG: writing file: {}".format(self._args.dry_run_path)
-    with open(self._args.dry_run_path,'w+') as file:
-      file.write(self.conf)
+    of_name = self._args.save_conf_path or self._name+'.conf'
+    self._notify('conf','saving: {}'.format(of_name))
+    with open(of_name,'w+') as f: f.write(self.conf)
 
   ### -------------------------------------------------------------------------
   ### load the inventory file
