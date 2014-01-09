@@ -57,7 +57,6 @@ class xmlmode_netconf(object):
       line = self._ser.readline()
       if line.startswith("<!--"): break
 
-    print "reading HELLO ..."
     self.hello = self._receive()
 
   def gather_facts(self):

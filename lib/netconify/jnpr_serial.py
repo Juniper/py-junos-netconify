@@ -75,7 +75,7 @@ class Serial(object):
     # misc setup
     self.nc = xmlmode_netconf( self._ser )
     self.state = self._ST_INIT
-    self.facts = {}
+    self.notifier = None
 
   ##### -----------------------------------------------------------------------
   ##### I/O read and write
@@ -100,6 +100,7 @@ class Serial(object):
     mark_end = mark_start + timedelta(seconds=self.EXPECT_TIMEOUT)
 
     while datetime.now() < mark_end:
+      sleep(0.1)                          # do not remove
       line = self._ser.readline()
       if not line: continue
       rxb += line
@@ -124,7 +125,7 @@ class Serial(object):
 
     prompt,found = self.read(expect)
 
-#    print "IN:{}: {}".format(found, prompt)
+    print "IN:{}: {}".format(found, prompt)
 
     def _ev_login():
       self.state = self._ST_LOGIN
@@ -148,6 +149,7 @@ class Serial(object):
         raise RuntimeError('login_failed')
 
     def _ev_shell():
+      print "DEBUG:{}".format(prompt)
       self.state = self._ST_DONE      
       # if we are here, then we are done
       return None
@@ -164,26 +166,30 @@ class Serial(object):
       return True
     else:
       # if we are here, then loop the event again
-#      print "OUT:{}".format(expect.pattern)
+      print "OUT:{}".format(expect.pattern)
       self._login_state_machine(expect, attempt+1)
 
 
-  def login(self, attempt = 0):
+  def notify(self,event,message):
+    if not self.notifier: return
+    self.notifier(event,message)
+
+  def login(self, notify=None):
     """
     open the serial connection and login.  once the login
     is successful, start the netconf XML API
     """
+    self.notifier = notify
+    self.notify('login','connecting to serial port ...')    
     self._ser.open()    
     self.write('\n\n\n')
 
-    # run through the console login process
-    print "logging in ... "
-
+    self.notify('login','logging in ...')
     self.state = self._ST_INIT
     self._login_state_machine(_RE_prompt)
 
     # now start NETCONF XML 
-    print "starting NETCONF ..."
+    self.notify('login','starting NETCONF')
     self.nc.open()
     return True
 
@@ -194,7 +200,7 @@ class Serial(object):
     """
     # close the NETCONF XML
 
-    print "logging out ..."
+    self.notify('logout','logging out ...')
     if self.nc.hello is not None:
       self.nc.close()
 

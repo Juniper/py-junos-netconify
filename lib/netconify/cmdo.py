@@ -1,5 +1,8 @@
+import pdb
+
 import os, sys
 import argparse
+import jinja2
 from ConfigParser import SafeConfigParser
 from getpass import getpass
 
@@ -8,6 +11,7 @@ import netconify
 class netconifyCmdo(object):
   PREFIX = '/etc/netconify'
   INVENTORY = 'hosts'                    # in PREFIX
+  DRYRUN_NOOB_CONF = 'noob.conf'         #
 
   ### -------------------------------------------------------------------------
   ### CONSTRUCTOR
@@ -17,6 +21,7 @@ class netconifyCmdo(object):
     self._setup_argsparser()
     self._inv = None                    # SafeConfigParser
     self._name = None                   # str
+    self._namevars = {}                 # vars for the named NOOB
     self._tty = None                    # jnpr.netconfigy.Serial
 
   ### -------------------------------------------------------------------------
@@ -36,18 +41,19 @@ class netconifyCmdo(object):
     p.add_argument('-i','--inventory', 
       help='inventory file of named NOOB devices and variables')
 
-    p.add_argument('--dry-run',
-      help="dry-run builds the config")
+    p.add_argument('--dry-run', nargs='?', dest='dry_run_path', 
+      const=self.DRYRUN_NOOB_CONF,      # default value ...
+      help="dry-run builds the config only, provide filename")
 
     ## ------------------------------------------------------------------------
     ## Explicit controls to select the NOOB conf file, vs. netconify
     ## auto-detecting based on read parameters
     ## ------------------------------------------------------------------------
 
-    p.add_argument('-M','--model',
-      help="EXPLICIT: Junos device model")
+    p.add_argument('-M','--model', dest='EXPLICIT_model',
+      help="EXPLICIT: Junos device model, conf from skel dir")
 
-    p.add_argument('-C', '--conf',
+    p.add_argument('-C', '--conf', dest='EXPLICIT_conf',
       help="EXPLICIT: Junos NOOB conf file")
 
     ## ------------------------------------------------------------------------
@@ -95,6 +101,12 @@ class netconifyCmdo(object):
       if self._args.passwd_prompt is True:
         self._args.passwd = getpass()
 
+      # handle dry-run mode and exit 
+
+      if self._args.dry_run_path is not None:
+        self._dry_run()
+        sys.exit(0)        
+
       # login to the NOOB over the serial port and perform the 
       # needed configuration
 
@@ -108,10 +120,13 @@ class netconifyCmdo(object):
     sys.exit(1)
 
   ### -------------------------------------------------------------------------
-  ### run through the netconification process
+  ### tty routines
   ### -------------------------------------------------------------------------
 
-  def _netconify(self):
+  def _tty_notifier(tty, event, message):
+    print "TTY:{}:{}".format(event,message)
+
+  def _tty_login(self):
     serargs = {}
     serargs['port'] = self._args.port
     serargs['baud'] = self._args.baud
@@ -119,10 +134,66 @@ class netconifyCmdo(object):
     serargs['passwd'] = self._args.passwd 
 
     self._tty = netconify.Serial(**serargs)
+    self._tty.login( notify=self._tty_notifier )
 
-    self._tty.login()
+  def _tty_logout(self):
+    self._tty.logout()    
 
-    self._tty.logout()
+  ### -------------------------------------------------------------------------
+  ### NETCONIFY the device!
+  ### -------------------------------------------------------------------------
+
+  def _netconify(self):
+    self._tty_login()
+    self._tty_logout()
+
+  ### -------------------------------------------------------------------------
+  ### dry-run mode is used to create the configuraiton file only
+  ### -------------------------------------------------------------------------
+
+  def _dry_run(self):
+    # if we're giving the EXPLICIT information so we don't need to connect
+    # to the device over the console, then simply use the information we've
+    # got and build the config.
+
+    # start with checking for an explicit path to a conf file
+    path = self._args.EXPLICIT_conf
+
+    # and then check for a model reference
+
+    expl_model = self._args.EXPLICIT_model or self._namevars.get('--model')
+    if path is None and expl_model is not None:
+      path = os.path.join(self._args.prefix, 'skel', expl_model+'.conf')
+
+    # if we have a path, then we don't need to connect to the device
+    # to get the information needed to build the device.
+
+    if path is None:
+      # otherwise, we need to login to the device to get the model information
+      # so we can use it to lookup the configuration file
+
+      self._tty_login()
+      self._tty.nc.facts.gather()
+      self._tty_logout()
+
+      model = self._tty.nc.facts.items['model']
+      print "DEUBG: model is: {}".format(model)
+      path = os.path.join(self._args.prefix, 'skel', model+'.conf')
+
+    self._conf_build(path)
+    self._conf_save()
+
+  def _conf_build(self, path):
+    if not os.path.isfile(path):
+      raise RuntimeError('no_file:{}'.format(path))
+
+    conf = open(path,'r').read()    
+    self.conf = jinja2.Template(conf).render(self._namevars)
+
+  def _conf_save(self):
+    print "DEBUG: writing file: {}".format(self._args.dry_run_path)
+    with open(self._args.dry_run_path,'w+') as file:
+      file.write(self.conf)
 
   ### -------------------------------------------------------------------------
   ### load the inventory file
@@ -154,5 +225,9 @@ class netconifyCmdo(object):
     if self._inv.has_section('all'):
       self._namevars.update(dict(self._inv.items('all')))
 
-    self._namevars.update(dict(self._inv.items(self._name)))
+    # load the named NOOB section and set the hostname if not
+    # explicty configured in the inventory file
 
+    self._namevars.update(dict(self._inv.items(self._name)))
+    if not self._namevars.has_key('hostname'):
+      self._namevars['hostname'] = self._name
