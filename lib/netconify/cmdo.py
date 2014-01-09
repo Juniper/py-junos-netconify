@@ -3,7 +3,7 @@ import argparse
 from ConfigParser import SafeConfigParser
 from getpass import getpass
 
-import jnpr.netconify
+import netconify
 
 class netconifyCmdo(object):
   PREFIX = '/etc/netconify'
@@ -102,7 +102,7 @@ class netconifyCmdo(object):
       serargs['user'] = self._args.user 
       serargs['passwd'] = self._args.passwd 
 
-      self._tty = jnpr.netconify.Serial(**serargs)
+      self._tty = netconify.Serial(**serargs)
       self._netconify()
 
     except RuntimeError as rterr:
