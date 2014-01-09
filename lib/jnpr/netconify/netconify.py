@@ -21,6 +21,20 @@ _RE_shell = re.compile(_RE_PAT_shell)
 _RE_passwd_or_shell = re.compile("{}|{}$".format(_RE_PAT_passwd,_RE_PAT_shell))
 
 class netconify(object):
+  """
+  netconify is used to bootstrap Junos New Out of the Box (NOOB) device
+  over the CONSOLE port.  The general use-case is to setup the minimal
+  configuration so that the device is IP reachable using SSH
+  and NETCONF for remote management.
+
+  netconify is needed for Junos devices that do not support
+  the DHCP 'auto-installation' or 'ZTP' feature; i.e. you *MUST*
+  to the NOOB configuration via the CONSOLE.  
+
+  netconify is also useful for situations even when the Junos
+  device supports auto-DHCP, but is not an option due to the
+  specific situation
+  """
   TIMEOUT = 0.2           # serial readline timeout, seconds
   EXPECT_TIMEOUT = 10     # total read timeout, seconds
 
@@ -29,16 +43,43 @@ class netconify(object):
   _ST_PASSWD = 2
   _ST_DONE = 3
 
+  ##### -----------------------------------------------------------------------
+  ##### CONSTRUCTOR
+  ##### -----------------------------------------------------------------------
+
   def __init__(self, port='/dev/ttyUSB0', **kvargs):
+    """
+    :port:
+      the serial port, defaults to USB0 since this
+
+    :kvargs['user']:
+      defaults to 'root'
+
+    :kvargs['passwd']:
+      defaults to empty; NOOB Junos devics there is
+      no root password initially
+
+    :kvargs['timeout']:
+      this is the serial readline() polling timeout.  
+      generally you should not have to tweak this.
+    """
+    # init args
     self.user = kvargs.get('user','root')
     self.passwd = kvargs.get('passwd','')
 
+    # setup the serial port, but defer open to :login():
     self._ser = serial.Serial()    
     self._ser.port = port
     self._ser.timeout = kvargs.get('timeout', self.TIMEOUT)
+
+    # misc setup
     self.nc = xmlmode_netconf( self._ser )
     self.state = self._ST_INIT
 
+  ##### -----------------------------------------------------------------------
+  ##### I/O read and write
+  ##### -----------------------------------------------------------------------
+  
   def write(self, content):
     """ write the :context: to the serial port and then immediately flush """
     self._ser.write(content+'\n')
@@ -72,6 +113,10 @@ class netconify(object):
   def sysctl(self,item):
     rd = self.write('sysctl {}'.format(item))
     return rd.split(': ')[1].split('\r')[0]
+
+  ##### -----------------------------------------------------------------------
+  ##### Login/logout 
+  ##### -----------------------------------------------------------------------
 
   def _login_state_machine(self, expect, attempt=0):
     if 10 == attempt: return False
@@ -123,22 +168,36 @@ class netconify(object):
 #      print "OUT:{}".format(expect.pattern)
       self._login_state_machine(expect, attempt+1)
 
+
   def login(self, attempt = 0):
     """
     open the serial connection and login.  once the login
-    is successful, then start the netconf XML API
+    is successful, start the netconf XML API
     """
     self._ser.open()    
     self.write('\n')
+
+    # run through the console login process
+
     self.state = self._ST_INIT
     try:
       self._login_state_machine(_RE_prompt)
     except:
       return "ERROR: LOGIN FAILED, check user/password"
-    else:
-      return True
+
+    # now start NETCONF XML 
+    self.nc.open()
+    return True
 
   def logout(self):
+    """
+    close down the NETCONF session and cleanly logout of the 
+    serial console port
+    """
+    # close the NETCONF XML
+    if self.nc.hello is not None:
+      self.nc.close()
+
     # assume at unix-shell
     self.write('\n')
     self.read( expect=_RE_shell )
