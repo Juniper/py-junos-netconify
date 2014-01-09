@@ -128,8 +128,6 @@ class Serial(object):
 
     def _ev_login():
       self.state = self._ST_LOGIN
-      if 'Login incorrect' in prompt:
-        print "LOGIN ATTEMPT FAILED ..."
       self.write(self.user)
       return _RE_passwd_or_shell
 
@@ -176,16 +174,13 @@ class Serial(object):
     is successful, start the netconf XML API
     """
     self._ser.open()    
-    self.write('\n')
+    self.write('\n\n\n')
 
     # run through the console login process
     print "logging in ... "
 
     self.state = self._ST_INIT
-    try:
-      self._login_state_machine(_RE_prompt)
-    except:
-      return "ERROR: LOGIN FAILED, check user/password"
+    self._login_state_machine(_RE_prompt)
 
     # now start NETCONF XML 
     print "starting NETCONF ..."
@@ -198,6 +193,8 @@ class Serial(object):
     serial console port
     """
     # close the NETCONF XML
+
+    print "logging out ..."
     if self.nc.hello is not None:
       self.nc.close()
 

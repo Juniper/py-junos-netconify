@@ -1,10 +1,13 @@
 import os, sys
 import argparse
 from ConfigParser import SafeConfigParser
+from getpass import getpass
 
-class netconifyCmdline(object):
+import jnpr.netconify
+
+class netconifyCmdo(object):
   PREFIX = '/etc/netconify'
-  INVENTORY = 'hosts'             # in PREFIX
+  INVENTORY = 'hosts'                    # in PREFIX
 
   ### -------------------------------------------------------------------------
   ### CONSTRUCTOR
@@ -13,7 +16,8 @@ class netconifyCmdline(object):
   def __init__(self):
     self._setup_argsparser()
     self._inv = None                    # SafeConfigParser
-    self._name = None                   # <str>
+    self._name = None                   # str
+    self._tty = None                    # jnpr.netconfigy.Serial
 
   ### -------------------------------------------------------------------------
   ### Command Line Arguments Parser 
@@ -29,11 +33,22 @@ class netconifyCmdline(object):
     p.add_argument('--prefix', default=self.PREFIX, 
       help='path to etc files')
 
-    p.add_argument('-i','--inventory', default=self.INVENTORY,
+    p.add_argument('-i','--inventory', 
       help='inventory file of named NOOB devices and variables')
 
+    p.add_argument('--dry-run',
+      help="dry-run builds the config")
+
+    ## ------------------------------------------------------------------------
+    ## Explicit controls to select the NOOB conf file, vs. netconify
+    ## auto-detecting based on read parameters
+    ## ------------------------------------------------------------------------
+
     p.add_argument('-M','--model',
-      help="Junos device model, used to identify skel file")
+      help="EXPLICIT: Junos device model")
+
+    p.add_argument('-C', '--conf',
+      help="EXPLICIT: Junos NOOB conf file")
 
     ## ------------------------------------------------------------------------
     ## serial port configuration
@@ -64,14 +79,31 @@ class netconifyCmdline(object):
   def run(self):
     try:
       
+      # build up the necessary NOOB variables
+
       self._args = self._argsparser.parse_args()
       if self._args.inventory is not None:
-        self._ld_inv()
+        self._ld_inv(path=self._args.inventory)
 
       if self._args.name is not None:
         if self._inv is None:
-          raise RuntimeError('need_inv')
+          self._ld_inv(path=os.path.join(self._args.prefix, self.INVENTORY))
         self._set_namevars()
+
+      # handle password input if necessary
+      if self._args.passwd_prompt is True:
+        self._args.passwd = getpass()
+
+      # time to login to the NOOB over the serial port
+
+      serargs = {}
+      serargs['port'] = self._args.port
+      serargs['baud'] = self._args.baud
+      serargs['user'] = self._args.user 
+      serargs['passwd'] = self._args.passwd 
+
+      self._tty = jnpr.netconify.Serial(**serargs)
+      self._netconify()
 
     except RuntimeError as rterr:
       self._err_hanlder(rterr)
@@ -81,19 +113,25 @@ class netconifyCmdline(object):
     sys.exit(1)
 
   ### -------------------------------------------------------------------------
+  ### run through the netconification process
+  ### -------------------------------------------------------------------------
+
+  def _netconify(self):
+    ok = self._tty.login()
+    if not ok:
+      raise RuntimeError('no_login')
+
+    self._tty.logout()
+
+  ### -------------------------------------------------------------------------
   ### load the inventory file
   ### -------------------------------------------------------------------------
 
-  def _ld_inv(self):
-    # Load the inventory file.  This file contains the global and per-name
-    # variables that will be used to render configuration templates.
-    inv_path = self._getpath(self._args.inventory)
-
-    if inv_path is None:
-      raise RuntimeError('no_inventory')
-
+  def _ld_inv(self, path):
     self._inv = SafeConfigParser()
-    self._inv.read(inv_path)
+    rd_files = self._inv.read(path)
+    if not len(rd_files):
+      raise RuntimeError('no_inv')
 
   ### -------------------------------------------------------------------------
   ### setup the name variables dictionary
@@ -116,25 +154,4 @@ class netconifyCmdline(object):
       self._namevars.update(dict(self._inv.items('all')))
 
     self._namevars.update(dict(self._inv.items(self._name)))
-
-  def _getpath(self, given):
-    inv_path = self._args.inventory
-
-    if os.path.isabs(inv_path):
-      if os.path.isfile(inv_path): return inv_path
-    else:
-      # first check to see if the given path is a valid
-      # relative file, and use it if it is.
-      if os.path.isfile(inv_path):
-        return inv_path
-      else:
-        # then join the prefix to the path to let the user
-        # refer to a file that's in the prefix directory
-        inv_path = os.path.join(self._args.prefix, inv_path)
-        if os.path.isfile(inv_path): 
-          return inv_path
-    return None
-
-
-
 

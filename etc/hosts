@@ -3,7 +3,7 @@
 ###
 ### Special Variables:
 ###
-###    _MODEL will explicity set the device model information
+###    --model will explicity set the device model information
 ###    when in turn maps to a specific NOOB conf/template file
 ###
 ### ---------------------------------------------------------------------------
@@ -15,8 +15,8 @@ domain = jls.net
 eth = ge-0/0/0
 
 [srx210]
-ipaddr = 192.168.10.41
+ipaddr = 192.168.10.41/24
 
 [srx210-j2]
-ipaddr = 192.168.10.41
+ipaddr = dhcp
 eth = ge-0/0/1
