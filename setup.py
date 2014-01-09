@@ -3,13 +3,14 @@ import sys
 
 sys.path.insert(0,'lib')
 from setuptools import setup, find_packages
+from jnpr.netconify import __version__
 
 requirements = [ 'jinja2', 'lxml', 'pyserial']
 
 setup(
     name = "junos-netconify",
     namespace_packages = ['jnpr'],
-    version = "0.0.1",
+    version = __version__,
     author = "Jeremy Schulman",
     author_email = "jschulman@juniper.net",
     description = ( "Junos console/bootstrap automation" ),
