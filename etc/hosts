@@ -1,3 +1,13 @@
+### ---------------------------------------------------------------------------
+### Inventory file for netconify tool
+###
+### Special Variables:
+###
+###    _MODEL will explicity set the device model information
+###    when in turn maps to a specific NOOB conf/template file
+###
+### ---------------------------------------------------------------------------
+
 [all]
 dns = 192.168.10.272,192.168.10.282
 gateway = 192.168.10.1

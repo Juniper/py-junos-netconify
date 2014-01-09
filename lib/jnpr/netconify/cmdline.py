@@ -12,10 +12,8 @@ class netconifyCmdline(object):
 
   def __init__(self):
     self._setup_argsparser()
-    self._inv = None
-    self._name = None
-
-
+    self._inv = None                    # SafeConfigParser
+    self._name = None                   # <str>
 
   ### -------------------------------------------------------------------------
   ### Command Line Arguments Parser 
