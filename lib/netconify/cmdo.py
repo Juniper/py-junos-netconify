@@ -91,18 +91,13 @@ class netconifyCmdo(object):
         self._set_namevars()
 
       # handle password input if necessary
+
       if self._args.passwd_prompt is True:
         self._args.passwd = getpass()
 
-      # time to login to the NOOB over the serial port
+      # login to the NOOB over the serial port and perform the 
+      # needed configuration
 
-      serargs = {}
-      serargs['port'] = self._args.port
-      serargs['baud'] = self._args.baud
-      serargs['user'] = self._args.user 
-      serargs['passwd'] = self._args.passwd 
-
-      self._tty = netconify.Serial(**serargs)
       self._netconify()
 
     except RuntimeError as rterr:
@@ -117,9 +112,15 @@ class netconifyCmdo(object):
   ### -------------------------------------------------------------------------
 
   def _netconify(self):
-    ok = self._tty.login()
-    if not ok:
-      raise RuntimeError('no_login')
+    serargs = {}
+    serargs['port'] = self._args.port
+    serargs['baud'] = self._args.baud
+    serargs['user'] = self._args.user 
+    serargs['passwd'] = self._args.passwd 
+
+    self._tty = netconify.Serial(**serargs)
+
+    self._tty.login()
 
     self._tty.logout()
 
