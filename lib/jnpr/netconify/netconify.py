@@ -75,6 +75,7 @@ class netconify(object):
     # misc setup
     self.nc = xmlmode_netconf( self._ser )
     self.state = self._ST_INIT
+    self.facts = {}
 
   ##### -----------------------------------------------------------------------
   ##### I/O read and write
@@ -178,6 +179,7 @@ class netconify(object):
     self.write('\n')
 
     # run through the console login process
+    print "logging in ... "
 
     self.state = self._ST_INIT
     try:
@@ -186,6 +188,7 @@ class netconify(object):
       return "ERROR: LOGIN FAILED, check user/password"
 
     # now start NETCONF XML 
+    print "starting NETCONF ..."
     self.nc.open()
     return True
 
