@@ -1,4 +1,11 @@
-from netconify import netconify, xmlmode_netconf
+from jnpr.netconify import  *
 
-tty = netconify(timeout=0.2)
+tty = netconify(user='root', passwd='juniper123')
 tty.login()
+
+# tty.nc.open()
+ 
+# ... do stuff ...
+
+# tty.nc.close()
+# tty.logout()
