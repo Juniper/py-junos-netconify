@@ -13,18 +13,40 @@ import netconify
 class netconifyCmdo(object):
   PREFIX = '/etc/netconify'
   INVENTORY = 'hosts'                    # in PREFIX
+  DEFAULT_NAME = 'noob'
 
   ### -------------------------------------------------------------------------
   ### CONSTRUCTOR
   ### -------------------------------------------------------------------------
 
-  def __init__(self):
+  def __init__(self, **kvargs):
+    """
+    :kvargs['on_namevars']:
+      callback function(<dict>) that allows the caller to
+      'munge' the namevars before they are applied into the 
+      configuration template file
+    """
     self._setup_argsparser()
     self._inv = None                    # SafeConfigParser
     self._name = None                   # str
     self._namevars = {}                 # vars for the named NOOB
     self._tty = None                    # jnpr.netconfigy.Serial
 
+    # hook functions
+    self.on_namevars = kvargs.get('on_namevars')
+
+  ### -------------------------------------------------------------------------
+  ### PROPERTIES
+  ### -------------------------------------------------------------------------
+
+  @property
+  def on_namevars(self):
+    return self._hook_on_namevars
+
+  @on_namevars.setter
+  def on_namevars(self, value):
+    self._hook_on_namevars = value
+  
   ### -------------------------------------------------------------------------
   ### Command Line Arguments Parser 
   ### -------------------------------------------------------------------------
@@ -33,21 +55,15 @@ class netconifyCmdo(object):
     p = argparse.ArgumentParser(add_help=True)
     self._argsparser = p
 
+    ## ------------------------------------------------------------------------
+    ## input identifiers
+    ## ------------------------------------------------------------------------
+
     p.add_argument('name', nargs='?', 
       help='name of Junos NOOB device')
 
-    p.add_argument('--prefix', default=self.PREFIX, 
-      help='override path to etc files')
-
     p.add_argument('-i','--inventory', 
       help='inventory file of named NOOB devices and variables')
-
-    p.add_argument('--dry-run', action='store_true', default=False,
-      dest='dry_run_mode',
-      help='dry-run builds the config only')
-
-    p.add_argument('--savedir', 
-      help="save a copy the NOOB conf file into this directory")
 
     ## ------------------------------------------------------------------------
     ## Explicit controls to select the NOOB conf file, vs. netconify
@@ -59,6 +75,27 @@ class netconifyCmdo(object):
 
     p.add_argument('-C', '--conf', dest='EXPLICIT_conf',
       help="EXPLICIT: Junos NOOB configuration file")
+
+    ## ------------------------------------------------------------------------
+    ## controlling options
+    ## ------------------------------------------------------------------------
+
+    p.add_argument('--dry-run', action='store_true', default=False,
+      dest='dry_run_mode',
+      help='dry-run builds the config only')
+
+    p.add_argument('--no-save', action='store_true', default=False,
+      help='Prevent files from begin saved into --savedir')
+
+    ## ------------------------------------------------------------------------
+    ## directory controls
+    ## ------------------------------------------------------------------------
+
+    p.add_argument('--prefix', default=self.PREFIX, 
+      help='override path to etc files')
+
+    p.add_argument('--savedir', nargs='?', default='.', 
+      help="Files are saved into this directory, CWD by default")
 
     ## ------------------------------------------------------------------------
     ## serial port configuration
@@ -113,9 +150,6 @@ class netconifyCmdo(object):
         self._dry_run()
       else:
         self._netconify()
-
-      # save the generated conf file if needed
-
 
     except RuntimeError as rterr:
       self._err_hanlder(rterr)
@@ -198,7 +232,6 @@ class netconifyCmdo(object):
       path = os.path.join(self._args.prefix, 'skel', model+'.conf')
 
     # now build the conf file, and ensure that it will get saved
-    if not self._args.savedir: self._args.savedir = '.'    
     self._conf_build(path)
 
   ### -------------------------------------------------------------------------
@@ -206,10 +239,15 @@ class netconifyCmdo(object):
   ### -------------------------------------------------------------------------
 
   def _conf_fromargs(self):
-    # start with checking for an explicit path to a conf file
+    """ 
+    determine configuration file path from any arg overrides.
+    returns :None: if there are no overrides
+    """
     path = self._args.EXPLICIT_conf
 
-    # and then check for a model reference
+    # and then check for a model reference.  this can come either
+    # from the cmdargs or from the --model override in the 
+    # inventory file
 
     expl_model = self._args.EXPLICIT_model or self._namevars.get('--model')
     if path is None and expl_model is not None:
@@ -218,17 +256,25 @@ class netconifyCmdo(object):
     return path
 
   def _conf_build(self, path):
+    """
+    template build the configuration and save a copy (unless --no-save)
+    """
     if not os.path.isfile(path):
       raise RuntimeError('no_file:{}'.format(path))
 
     conf = open(path,'r').read()    
     self.conf = jinja2.Template(conf).render(self._namevars)
 
-    if self._args.savedir is not None:
+    if self._args.no_save is False:
       self._conf_save()
 
   def _conf_save(self):
-    fname = (self._name or 'noob')+'.conf'
+    """ 
+    saves the configuraiton file, either using the <name>
+    from the commamnd args or 'noob' as default
+    """
+
+    fname = (self._name or self.DEFAULT_NAME)+'.conf'
     path = os.path.join(self._args.savedir, fname)
     self._notify('conf','saving: {}'.format(path))
     with open(path,'w+') as f: f.write(self.conf)
@@ -238,6 +284,7 @@ class netconifyCmdo(object):
   ### -------------------------------------------------------------------------
 
   def _ld_inv(self, path):
+    """ loads the inventory file contents """
     self._inv = SafeConfigParser()
     rd_files = self._inv.read(path)
     if not len(rd_files):
@@ -248,10 +295,15 @@ class netconifyCmdo(object):
   ### -------------------------------------------------------------------------
 
   def _set_namevars(self):
+    """ 
+    setup the namevars for the designated <name>.  these
+    vars will be used in the context for template building
+    the configuration file.
+    """
     # see if the name exists in the inventory.  if not, then
     # raise an error.
     if not self._inv.has_section(self._args.name):
-      raise RuntimeError("no_name")
+      raise RuntimeError("unknown_name")
 
     self._name = self._args.name
 
@@ -269,3 +321,9 @@ class netconifyCmdo(object):
     self._namevars.update(dict(self._inv.items(self._name)))
     if not self._namevars.has_key('hostname'):
       self._namevars['hostname'] = self._name
+
+    if self._hook_on_namevars is not None:
+      # invoke the caller hook so they can
+      # munge the namevars before they are applied 
+      # into the configuraiton template
+      self._hook_on_namevars(self._namevars)
