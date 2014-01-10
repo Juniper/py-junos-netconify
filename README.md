@@ -44,3 +44,15 @@ optional arguments:
   -k                    prompt for password
 ````
 
+# INSTALLATION
+_not in PyPi yet_
+
+git clone this repo and then use `python setup.py install` to install.  
+
+# DEPENDENCIES
+
+This has been tested with python 2.7.  The required modules are defined in `setup.py`.
+
+# WORK IN PROGRESS
+
+This is still a work in progress, but it is far enough along that you can start trying it out.  If you have any questions, please open an issue against the repo.  Thank you.
