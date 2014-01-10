@@ -52,13 +52,21 @@ Junos NOOB devices can netconified:
 unix> netconify demosrx
 ````
 
-Where `mysrx` is the name identified in the `/etc/netconify/hosts` file.  You can omit the name if your configuration files are static; i.e. are not templates with variables.
+Where `demosrx` is the name identified in the `/etc/netconify/hosts` file.  You can omit the name if your configuration files are static; i.e. are not templates with variables.
 
-The NOOB conf file is selected from `/etc/netconify/skel` by the model of the device.  So if `mysrx` was an SRX210H device, the output of the netconify would look like this:
+The NOOB conf file is selected from `/etc/netconify/skel` by the model of the device.  So if `demosrx` was an SRX210H device, the output of the netconify would look like the following.  I also included the command option to save a copy of the auto-generated config file.
 
 ````
+[jeremy@linux]$ netconify demosrx --savedir . 
+TTY:login:connecting to serial port ...
+TTY:login:logging in ...
+TTY:login:starting NETCONF
+CMD:conf:building from: /etc/netconify/skel/SRX210H.conf
+CMD:conf:saving: ./demosrx.conf
+CMD:conf:loading into device ...
+CMD:conf:commit ... please be patient
+TTY:logout:logging out ...
 ````
-
 
 # INSTALLATION
 _not in PyPi yet_
