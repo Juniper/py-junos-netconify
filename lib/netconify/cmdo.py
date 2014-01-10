@@ -1,5 +1,7 @@
-import pdb
-
+"""
+This file defines the 'netconifyCmdo' class used by the 'netconify' 
+shell utility
+"""
 import os, sys
 import argparse
 import jinja2
@@ -35,7 +37,7 @@ class netconifyCmdo(object):
       help='name of Junos NOOB device')
 
     p.add_argument('--prefix', default=self.PREFIX, 
-      help='path to etc files')
+      help='override path to etc files')
 
     p.add_argument('-i','--inventory', 
       help='inventory file of named NOOB devices and variables')
@@ -53,10 +55,10 @@ class netconifyCmdo(object):
     ## ------------------------------------------------------------------------
 
     p.add_argument('-M','--model', dest='EXPLICIT_model',
-      help="EXPLICIT: Junos device model, conf from skel dir")
+      help="EXPLICIT: Junos device model, identifies file in <prefix>/skel")
 
     p.add_argument('-C', '--conf', dest='EXPLICIT_conf',
-      help="EXPLICIT: Junos NOOB conf file")
+      help="EXPLICIT: Junos NOOB configuration file")
 
     ## ------------------------------------------------------------------------
     ## serial port configuration
@@ -73,14 +75,14 @@ class netconifyCmdo(object):
     ## ------------------------------------------------------------------------
 
     p.add_argument('-u','--user', default='root',
-      help='login user name')
+      help='login user name, defaults to "root"')
 
     p.add_argument('-p','--passwd', default='',
-      help='login user password, alternatively use -k option to prompt')
+      help='login user password, *empty* for NOOB')
 
     p.add_argument('-k', action='store_true', default=False,
       dest='passwd_prompt', 
-      help='prompt for password')
+      help='prompt for user password')
 
   ### -------------------------------------------------------------------------
   ### run command line tool

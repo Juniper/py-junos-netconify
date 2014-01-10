@@ -4,7 +4,7 @@
 ### Special Variables:
 ###
 ###    --model will explicity set the device model information
-###    when in turn maps to a specific NOOB conf/template file
+###    which in turn maps to a specific NOOB conf/template file
 ###
 ### ---------------------------------------------------------------------------
 
