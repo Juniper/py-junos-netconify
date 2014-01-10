@@ -2,11 +2,11 @@ import os, sys
 from glob import glob
 from setuptools import setup, find_packages
 
-requirements = [ 'jinja2','pyserial' ]
+requirements = [ 'jinja2','pyserial','lxml' ]
 
 setup(
     name = "netconify",
-    version = "0.0.2",
+    version = "0.0.1",
     author = "Jeremy Schulman",
     author_email = "nwkautomaniac@gmain.com",
     description = ( "Junos console/bootstrap automation"),
