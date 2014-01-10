@@ -26,22 +26,22 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  --prefix PREFIX       path to etc files
+  --prefix PREFIX       override path to etc files
   -i INVENTORY, --inventory INVENTORY
                         inventory file of named NOOB devices and variables
   --dry-run             dry-run builds the config only
   --savedir SAVEDIR     save a copy the NOOB conf file into this directory
   -M EXPLICIT_MODEL, --model EXPLICIT_MODEL
-                        EXPLICIT: Junos device model, conf from skel dir
+                        EXPLICIT: Junos device model, identifies file in
+                        <prefix>/skel
   -C EXPLICIT_CONF, --conf EXPLICIT_CONF
-                        EXPLICIT: Junos NOOB conf file
+                        EXPLICIT: Junos NOOB configuration file
   -P PORT, --port PORT  serial port device
   --baud BAUD           serial port baud rate
-  -u USER, --user USER  login user name
+  -u USER, --user USER  login user name, defaults to "root"
   -p PASSWD, --passwd PASSWD
-                        login user password, alternatively use -k option to
-                        prompt
-  -k                    prompt for password
+                        login user password, *empty* for NOOB
+  -k                    prompt for user password
 ````
 
 # EXAMPLE
