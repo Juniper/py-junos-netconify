@@ -44,6 +44,22 @@ optional arguments:
   -k                    prompt for password
 ````
 
+# EXAMPLE
+
+Junos NOOB devices can netconified:
+
+````
+unix> netconify demosrx
+````
+
+Where `mysrx` is the name identified in the `/etc/netconify/hosts` file.  You can omit the name if your configuration files are static; i.e. are not templates with variables.
+
+The NOOB conf file is selected from `/etc/netconify/skel` by the model of the device.  So if `mysrx` was an SRX210H device, the output of the netconify would look like this:
+
+````
+````
+
+
 # INSTALLATION
 _not in PyPi yet_
 
