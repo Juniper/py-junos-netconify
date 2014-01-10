@@ -11,7 +11,7 @@ There are times when you MUST console into a Junos device to perform the NOOB co
 
 The general use-case:
 
-The `netconify` utility automatically performs this configuration by logging into the serial console, extracting information from the device, and using it to template build a configuration file.  The templates are stored in `/etc/netconify/skel` and the variables for each of the named devices is stored in `/etc/netconify/hosts`.  There are some samples installed by this modu
+The `netconify` utility automatically performs this configuration by logging into the serial console, extracting information from the device, and using it to template build a configuration file.  The templates are stored in `/etc/netconify/skel` and the variables for each of the named devices is stored in `/etc/netconify/hosts`.  There are some samples installed by this module.
 
 # USAGE
 
