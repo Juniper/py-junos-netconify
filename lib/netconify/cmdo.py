@@ -2,9 +2,8 @@
 This file defines the 'netconifyCmdo' class used by the 'netconify' 
 shell utility
 """
-import os, sys
-import argparse
-import jinja2
+import os, sys, json
+import argparse, jinja2
 from ConfigParser import SafeConfigParser
 from getpass import getpass
 
@@ -194,6 +193,7 @@ class netconifyCmdo(object):
 
     self._notify('conf','building from: {}'.format(path))
     self._conf_build(path)
+    self._facts_save()
     self._notify('conf','loading into device ...')
 
     rc = self._tty.nc.load(content=self.conf)
@@ -273,11 +273,17 @@ class netconifyCmdo(object):
     saves the configuraiton file, either using the <name>
     from the commamnd args or 'noob' as default
     """
-
     fname = (self._name or self.DEFAULT_NAME)+'.conf'
     path = os.path.join(self._args.savedir, fname)
     self._notify('conf','saving: {}'.format(path))
     with open(path,'w+') as f: f.write(self.conf)
+
+  def _facts_save(self):
+    fname = (self._name or self.DEFAULT_NAME)+'.json'
+    path = os.path.join(self._args.savedir, fname)
+    self._notify('facts','saving: {}'.format(path))
+    as_json = json.dumps(self._tty.nc.facts.items)
+    with open(path,'w+') as f: f.write(as_json)
 
   ### -------------------------------------------------------------------------
   ### load the inventory file

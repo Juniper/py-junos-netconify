@@ -18,7 +18,7 @@ class Facts(object):
 
     self.facts['version'] = re.findall(r'\[(.*)\]', pkginfo)[0]
     self.facts['model'] = rsp.findtext('product-model').upper()
-    self.facts['hostname'] = rsp.findtext('host-name').upper()
+    self.facts['hostname'] = rsp.findtext('host-name')
 
   def chassis(self):
     rsp = self.rpc('get-chassis-inventory')

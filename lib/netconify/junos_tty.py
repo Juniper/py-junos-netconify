@@ -3,7 +3,7 @@ import re
 from time import sleep
 from datetime import datetime, timedelta
 
-from .xmlmode import xmlmode_netconf
+from .tty_netconf import tty_netconf
 
 __all__ = ['Serial']
 
@@ -20,9 +20,9 @@ _RE_login = re.compile(_RE_PAT_login)
 _RE_shell = re.compile(_RE_PAT_shell)
 _RE_passwd_or_shell = re.compile("{}|{}$".format(_RE_PAT_passwd,_RE_PAT_shell))
 
-class Serial(object):
+class Terminal(object):
   """
-  Serial is used to bootstrap Junos New Out of the Box (NOOB) device
+  Terminal is used to bootstrap Junos New Out of the Box (NOOB) device
   over the CONSOLE port.  The general use-case is to setup the minimal
   configuration so that the device is IP reachable using SSH
   and NETCONF for remote management.
@@ -47,10 +47,10 @@ class Serial(object):
   ##### CONSTRUCTOR
   ##### -----------------------------------------------------------------------
 
-  def __init__(self, port='/dev/ttyUSB0', **kvargs):
+  def __init__(self, port, **kvargs):
     """
     :port:
-      the serial port, defaults to USB0 since this
+      identifies the tty port, as provided by the subclass
 
     :kvargs['user']:
       defaults to 'root'
@@ -64,16 +64,15 @@ class Serial(object):
       generally you should not have to tweak this.
     """
     # init args
+    self.port = port
     self.user = kvargs.get('user','root')
     self.passwd = kvargs.get('passwd','')
 
-    # setup the serial port, but defer open to :login():
-    self._ser = serial.Serial()    
-    self._ser.port = port
-    self._ser.timeout = kvargs.get('timeout', self.TIMEOUT)
+    # initialize the underlying TTY device
+    self._tty_dev_init(port, kvargs)
 
     # misc setup
-    self.nc = xmlmode_netconf( self._ser )
+    self.nc = tty_netconf( self )
     self.state = self._ST_INIT
     self.notifier = None
 
@@ -82,9 +81,7 @@ class Serial(object):
   ##### -----------------------------------------------------------------------
   
   def write(self, content):
-    """ write the :context: to the serial port and then immediately flush """
-    self._ser.write(content+'\n')
-    self._ser.flush()
+    self._tty_dev_write(content)
 
   def read(self, expect=_RE_prompt ):
     """
@@ -101,7 +98,7 @@ class Serial(object):
 
     while datetime.now() < mark_end:
       sleep(0.1)                          # do not remove
-      line = self._ser.readline()
+      line = self._tty_dev_read()
       if not line: continue
       rxb += line
       found = expect.search( rxb ) 
@@ -142,7 +139,7 @@ class Serial(object):
         # assume we're in a hung state from XML-MODE
         # issue the close command and then we expect
         # to be back at the unix shell
-        self._ser.write("<rpc><close-session/></rpc>")
+        self._tty_dev_rawwrite("<rpc><close-session/></rpc>")
         return _RE_shell
       else:
         # assume this was a bad login
@@ -180,8 +177,8 @@ class Serial(object):
     is successful, start the netconf XML API
     """
     self.notifier = notify
-    self.notify('login','connecting to serial port ...')    
-    self._ser.open()    
+    self.notify('login','connecting to terminal port ...')    
+    self._tty_dev_open()
     self.write('\n\n\n')
 
     self.notify('login','logging in ...')
@@ -207,10 +204,58 @@ class Serial(object):
     # assume at unix-shell
     self.write('\n')
     self.read( expect=_RE_shell )
+    self._tty_dev_close()
+    return True
+
+##### -------------------------------------------------------------------------
+##### Terminal connection over SERIAL CONSOLE
+##### -------------------------------------------------------------------------
+
+class Serial(Terminal):
+  def __init__(self, port='/dev/ttyUSB0', **kvargs):
+    """
+    :port:
+      the serial port, defaults to USB0 since this
+    """
+    Terminal.__init__(self, port, **kvargs)
+
+  def _tty_dev_init(self, port, kvargs):
+    # setup the serial port, but defer open to :login():
+    self._ser = serial.Serial()    
+    self._ser.port = port
+    self._ser.timeout = kvargs.get('timeout', self.TIMEOUT)
+
+  def _tty_dev_open(self):
+    self._ser.open()    
+
+  def _tty_dev_close(self):
     self._ser.write('exit\n')
     self._ser.flush()
     self._ser.close()
-    return True
 
+  def _tty_dev_write(self,content):
+    """ write the :context: to the serial port and then immediately flush """
+    self._ser.write(content+'\n')
+    self._ser.flush()
 
-  
+  def _tty_dev_rawwrite(self,content):
+    self._ser.write(content)
+
+  def _tty_dev_flush(self):
+    self._ser.flush()        
+
+  def _tty_dev_read(self):
+    return self._ser.readline()    
+
+##### -------------------------------------------------------------------------
+##### Terminal connection over TELNET CONSOLE
+##### -------------------------------------------------------------------------
+
+class Telnet(Terminal):
+  def __init__(self, port, **kvargs):
+    """
+    :port:
+      should be in format of ip_addr[:telnetport] where telnetport defaults
+      to standard TELNET port
+    """
+    raise RuntimeError("NOT IMPLEMENTED YET")

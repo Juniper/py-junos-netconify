@@ -19,17 +19,17 @@ _junosns_strip = lambda text: _junosns.sub('',text)
 ##### xmlmode_netconf
 ##### =========================================================================
 
-class xmlmode_netconf(object):
+class tty_netconf(object):
   """
   provides access to the Junos XML API when bootstraping through the 
   serial console port
   """  
 
-  def __init__(self, serial):
+  def __init__(self, tty):
     """
     :serial: is serial.Serial object 
     """
-    self._ser = serial
+    self._tty = tty
     self.hello = None
     self.facts = Facts(self)
 
@@ -37,7 +37,7 @@ class xmlmode_netconf(object):
     """ process the XML response into an XML object """
     rxbuf = []
     while True:
-      line = self._ser.readline().strip()
+      line = self._tty._tty_dev_read().strip()
       if not line: continue                       # if we got nothin, go again
       if _NETCONF_EOM == line: break              # check for end-of-message
       rxbuf.append(line)
@@ -50,11 +50,10 @@ class xmlmode_netconf(object):
 
   def open(self):
     """ start the XML API process and receive the 'hello' message """
-    self._ser.write('xml-mode netconf need-trailer\n')
-    self._ser.flush()
+    self._tty._tty_dev_write('xml-mode netconf need-trailer')
     while True:
       time.sleep(0.1)
-      line = self._ser.readline()
+      line = self._tty._tty_dev_read()
       if line.startswith("<!--"): break
 
     self.hello = self._receive()
@@ -102,14 +101,14 @@ class xmlmode_netconf(object):
     """
 
     if not cmd.startswith('<'): cmd = '<{}/>'.format(cmd)
-    self._ser.write('<rpc>')
-    self._ser.write(cmd)
-    self._ser.write('</rpc>')
+    self._tty._tty_dev_rawwrite('<rpc>')
+    self._tty._tty_dev_rawwrite(cmd)
+    self._tty._tty_dev_rawwrite('</rpc>')
 
     rsp = self._receive()
     return rsp[0] # return first child after the <rpc-reply>
 
   def close(self):
     """ issue the XML API to close the session """
-    self._ser.write('<rpc><close-session/></rpc>')
-    self._ser.flush()
+    self._tty._tty_dev_rawwrite('<rpc><close-session/></rpc>')
+    self._tty._tty_dev_flush()

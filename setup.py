@@ -18,7 +18,7 @@ setup(
     package_dir={'':'lib'},
     scripts=['tools/netconify'],
     data_files=[
-        ('/etc/netconify/skel', glob('etc/skel/*.conf')),
-	('/etc/netconify', ['etc/hosts'])
+      ('/etc/netconify/skel', glob('etc/skel/*.conf')),
+	  ('/etc/netconify', ['etc/hosts'])
     ]
 )
