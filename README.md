@@ -68,6 +68,14 @@ CMD:conf:commit ... please be patient
 TTY:logout:logging out ...
 ````
 
+### Static NOOB files
+
+If your NOOB.conf files do not have any variables, i.e. static, then you do not necessarily need to provide the <name> argument; since there is no need to do <namevars> rendering.  For these use cases, you can use netconify with no parameters:
+
+````
+[jeremy@linux]$ netconify
+````
+The device facts will be used to determine the model information, and from there, the correct NOOB.conf file will be selected and applied.
 # INSTALLATION
 _not in PyPi yet_
 
