@@ -1,11 +1,11 @@
-import serial
+import serial, telnetlib
 import re
 from time import sleep
 from datetime import datetime, timedelta
 
 from .tty_netconf import tty_netconf
 
-__all__ = ['Serial']
+__all__ = ['Serial', 'Telnet']
 
 ##### =========================================================================
 ##### Serial class
@@ -14,6 +14,7 @@ __all__ = ['Serial']
 _RE_PAT_login = '(?P<login>ogin:)\s*'
 _RE_PAT_passwd = '(?P<passwd>assword:)\s*'
 _RE_PAT_shell = '(?P<shell>%\s*)'
+_RE_PAT_cli = '(?P<cli>>\s*)'
 
 _RE_prompt = re.compile('{}|{}|{}$'.format(_RE_PAT_login,_RE_PAT_passwd,_RE_PAT_shell))
 _RE_login = re.compile(_RE_PAT_login)
@@ -75,43 +76,6 @@ class Terminal(object):
     self.nc = tty_netconf( self )
     self.state = self._ST_INIT
     self.notifier = None
-
-  ##### -----------------------------------------------------------------------
-  ##### I/O read and write
-  ##### -----------------------------------------------------------------------
-  
-  def write(self, content):
-    self._tty_dev_write(content)
-
-  def read(self, expect=_RE_prompt ):
-    """
-    reads text from the serial console (using readline) until
-    a match is found against the :expect: regular-expression object.
-    When a match is found, return a tuple(<text>,<found>) where
-    <text> is the complete text and <found> is the name of the 
-    regular-expression group. If a timeout occurs, then return 
-    the tuple(None,None).
-    """
-    rxb = ''
-    mark_start = datetime.now()
-    mark_end = mark_start + timedelta(seconds=self.EXPECT_TIMEOUT)
-
-    while datetime.now() < mark_end:
-      sleep(0.1)                          # do not remove
-      line = self._tty_dev_read()
-      if not line: continue
-      rxb += line
-      found = expect.search( rxb ) 
-      if found is not None: break         # done reading
-    else:
-      # exceeded the while loop timeout
-      return (None,None)
-
-    return (rxb, found.lastgroup)
-
-  def sysctl(self,item):
-    rd = self.write('sysctl {}'.format(item))
-    return rd.split(': ')[1].split('\r')[0]
 
   ##### -----------------------------------------------------------------------
   ##### Login/logout 
@@ -247,6 +211,35 @@ class Serial(Terminal):
   def _tty_dev_read(self):
     return self._ser.readline()    
 
+  def write(self, content):
+    self._tty_dev_write(content)
+
+  def read(self, expect=_RE_prompt ):
+    """
+    reads text from the serial console (using readline) until
+    a match is found against the :expect: regular-expression object.
+    When a match is found, return a tuple(<text>,<found>) where
+    <text> is the complete text and <found> is the name of the 
+    regular-expression group. If a timeout occurs, then return 
+    the tuple(None,None).
+    """
+    rxb = ''
+    mark_start = datetime.now()
+    mark_end = mark_start + timedelta(seconds=self.EXPECT_TIMEOUT)
+
+    while datetime.now() < mark_end:
+      sleep(0.1)                          # do not remove
+      line = self._tty_dev_read()
+      if not line: continue
+      rxb += line
+      found = expect.search( rxb ) 
+      if found is not None: break         # done reading
+    else:
+      # exceeded the while loop timeout
+      return (None,None)
+
+    return (rxb, found.lastgroup)    
+
 ##### -------------------------------------------------------------------------
 ##### Terminal connection over TELNET CONSOLE
 ##### -------------------------------------------------------------------------
@@ -258,4 +251,42 @@ class Telnet(Terminal):
       should be in format of ip_addr[:telnetport] where telnetport defaults
       to standard TELNET port
     """
-    raise RuntimeError("NOT IMPLEMENTED YET")
+    Terminal.__init__(self, port, **kvargs)
+
+  def _tty_dev_init(self, port, kvargs):
+    # setup the serial port, but defer open to :login():
+    self._telnet = telnetlib.Telnet()    
+
+  def _tty_dev_open(self):
+    self._telnet.open(self.port)    
+
+  def _tty_dev_close(self):
+    self._telnet.write('exit\n')
+    self._telnet.close()
+
+  def _tty_dev_write(self,content):
+    """ write the :context: to the serial port and then immediately flush """
+    self._telnet.write(content+'\n')
+
+  def _tty_dev_rawwrite(self,content):
+    self._telnet.write(content)
+
+  def _tty_dev_flush(self):
+    pass
+
+  def _tty_dev_read(self):
+    return self._telnet.read_until('\n')        
+
+  def write(self, content):
+    self._tty_dev_write(content)
+
+  def read(self, expect=_RE_prompt ):
+    got = self._telnet.expect([expect], timeout=5)
+    if got[1] is None:
+      import pdb
+      pdb.set_trace()
+
+    return (got[2],got[1].lastgroup)
+
+
+

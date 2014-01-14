@@ -97,7 +97,7 @@ class netconifyCmdo(object):
       help="Files are saved into this directory, CWD by default")
 
     ## ------------------------------------------------------------------------
-    ## serial port configuration
+    ## tty port configuration
     ## ------------------------------------------------------------------------
 
     p.add_argument('-P','--port', default='/dev/ttyUSB0',
@@ -105,6 +105,9 @@ class netconifyCmdo(object):
 
     p.add_argument('--baud', default='9600',
       help="serial port baud rate")
+
+    p.add_argument('-T', '--telnet',
+      help='telnet/terminal server, <host>[:port]')
 
     ## ------------------------------------------------------------------------
     ## login configuration
@@ -168,13 +171,20 @@ class netconifyCmdo(object):
     print "CMD:{}:{}".format(event,message)
 
   def _tty_login(self):
-    serargs = {}
-    serargs['port'] = self._args.port
-    serargs['baud'] = self._args.baud
-    serargs['user'] = self._args.user 
-    serargs['passwd'] = self._args.passwd 
 
-    self._tty = netconify.Serial(**serargs)
+    tty_args = {}
+    tty_args['user'] = self._args.user 
+    tty_args['passwd'] = self._args.passwd 
+
+
+    if self._args.telnet is not None:
+      tty_args['port'] = self._args.telnet      
+      self._tty = netconify.Telnet(**tty_args)
+    else:
+      tty_args['port'] = self._args.port      
+      tty_args['baud'] = self._args.baud
+      self._tty = netconify.Serial(**tty_args)
+
     self._tty.login( notify=self._tty_notifier )
 
   def _tty_logout(self):
