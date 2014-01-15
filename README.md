@@ -16,9 +16,10 @@ The `netconify` utility automatically performs this configuration by logging int
 # USAGE
 
 ````
-usage: netconify [-h] [--prefix PREFIX] [-i INVENTORY] [--dry-run]
-                 [--savedir SAVEDIR] [-M EXPLICIT_MODEL] [-C EXPLICIT_CONF]
-                 [-P PORT] [--baud BAUD] [-u USER] [-p PASSWD] [-k]
+usage: netconify [-h] [-i INVENTORY] [-M EXPLICIT_MODEL] [-C EXPLICIT_CONF]
+                 [--dry-run] [--no-save] [--confdir PREFIX]
+                 [--savedir [SAVEDIR]] [-P PORT] [--baud BAUD] [-T TELNET]
+                 [-u USER] [-p PASSWD] [-k]
                  [name]
 
 positional arguments:
@@ -26,18 +27,21 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  --prefix PREFIX       override path to etc files
   -i INVENTORY, --inventory INVENTORY
                         inventory file of named NOOB devices and variables
-  --dry-run             dry-run builds the config only
-  --savedir SAVEDIR     save a copy the NOOB conf file into this directory
   -M EXPLICIT_MODEL, --model EXPLICIT_MODEL
                         EXPLICIT: Junos device model, identifies file in
                         <prefix>/skel
   -C EXPLICIT_CONF, --conf EXPLICIT_CONF
                         EXPLICIT: Junos NOOB configuration file
+  --dry-run             dry-run builds the config only
+  --no-save             Prevent files from begin saved into --savedir
+  --confdir PREFIX      override path to etc directory configuration files
+  --savedir [SAVEDIR]   Files are saved into this directory, CWD by default
   -P PORT, --port PORT  serial port device
   --baud BAUD           serial port baud rate
+  -T TELNET, --telnet TELNET
+                        telnet/terminal server, <host>:<port>
   -u USER, --user USER  login user name, defaults to "root"
   -p PASSWD, --passwd PASSWD
                         login user password, *empty* for NOOB
