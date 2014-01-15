@@ -200,7 +200,6 @@ class netconifyCmdo(object):
   ### -------------------------------------------------------------------------
 
   def _netconify(self):
-
     self._tty_login()
     self._tty.nc.facts.gather()
 
@@ -210,36 +209,28 @@ class netconifyCmdo(object):
     self._notify('conf','building from: {}'.format(path))
     self._conf_build(path)
     self._facts_save()
+
+    rc = self._push_config()    
+    self._tty_logout()
+    return rc
+
+  def _push_config(self):
     self._notify('conf','loading into device ...')
 
-    ### HACK
-    # self._tty_logout()
-    # return True
-    ### HACK
-
-
+    """ push the configuration or rollback changes on error """
     rc = self._tty.nc.load(content=self.conf)
     if rc is not True:
       self._notify('conf_ld_err','failure to load configuration, aborting.')
       self._tty.nc.rollback();
-      self._tty_logout()
       return False
-      ###
-      ### --- unreachable ---
-      ###      
 
     self._notify('conf','commit ... please be patient')
     rc = self._tty.nc.commit()
     if rc is not True:
       self._notify('conf_save_err','faiure to commit configuration, aborting.')
       self._tty.nc.rollback()
-      self._tty_logout()
       return False
-      ###
-      ### --- unreachable ---
-      ###      
 
-    self._tty_logout()
     return True
 
   ### -------------------------------------------------------------------------
