@@ -48,9 +48,14 @@ class tty_netconf(object):
 
     return etree.XML(''.join(rxbuf))
 
-  def open(self):
+  def open(self, at_shell):
     """ start the XML API process and receive the 'hello' message """
-    self._tty._tty_dev_write('xml-mode netconf need-trailer')
+    nc_cmd = (
+      'junoscript netconf need-trailer',
+      'xml-mode netconf need-trailer'
+    )[at_shell]
+
+    self._tty._tty_dev_write(nc_cmd)
     while True:
       time.sleep(0.1)
       line = self._tty._tty_dev_read()
