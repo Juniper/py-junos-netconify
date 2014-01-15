@@ -3,7 +3,7 @@ import re
 from time import sleep
 from datetime import datetime, timedelta
 
-from .tty_terminal import Terminal
+from .tty import Terminal
 
 ##### -------------------------------------------------------------------------
 ##### Terminal connection over SERIAL CONSOLE
@@ -47,8 +47,15 @@ class Serial(Terminal):
   ### -------------------------------------------------------------------------
 
   def write(self, content):
+    """ write content + <RETURN> """
     self._ser.write(content+'\n')
-    self._ser.flush()
+
+  def rawwrite(self,content):
+    self._ser.write(content)
+
+  def read(self):
+    """ read a single line """
+    return self._ser.readline()  
 
   def read_prompt(self):
     """
@@ -76,15 +83,4 @@ class Serial(Terminal):
 
     return (rxb, found.lastgroup)   
 
-  ### -------------------------------------------------------------------------
-  ### I/O LOW-LEVEL read and write called internally
-  ### -------------------------------------------------------------------------
 
-  def _tty_rawwrite(self,content):
-    self._ser.write(content)
-
-  def _tty_flush(self):
-    self._ser.flush()        
-
-  def _tty_dev_read(self):
-    return self._ser.readline()  

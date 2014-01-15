@@ -161,9 +161,10 @@ class Terminal(object):
 
     def _ev_cli():
       if self.state == self._ST_INIT:
-        # in bad state, return now and retry        
-#        print "DEUBG: burp cli."
-        return
+        # this means that the shell was left
+        # open.  probably not a good thing,
+        # so issue a notify, but move on.
+        self.notify('login','CLI login was open!')
 
       self.at_shell = False
       self.state = self._ST_DONE

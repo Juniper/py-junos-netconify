@@ -107,7 +107,7 @@ class netconifyCmdo(object):
       help="serial port baud rate")
 
     p.add_argument('-T', '--telnet',
-      help='telnet/terminal server, <host>[:port]')
+      help='telnet/terminal server, <host>:<port>')
 
     ## ------------------------------------------------------------------------
     ## login configuration
@@ -176,9 +176,10 @@ class netconifyCmdo(object):
     tty_args['user'] = self._args.user 
     tty_args['passwd'] = self._args.passwd 
 
-
     if self._args.telnet is not None:
-      tty_args['port'] = self._args.telnet      
+      host,port = self._args.telnet.split(':')
+      tty_args['host'] = host
+      tty_args['port'] = port
       self._tty = netconify.Telnet(**tty_args)
     else:
       tty_args['port'] = self._args.port      

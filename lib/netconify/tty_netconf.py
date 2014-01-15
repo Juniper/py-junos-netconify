@@ -39,7 +39,7 @@ class tty_netconf(object):
 
     while True:
       time.sleep(0.1)
-      line = self._tty._tty_dev_read()
+      line = self._tty.read()
       if line.startswith("<!--"): break
 
     self.hello = self._receive()
@@ -50,9 +50,8 @@ class tty_netconf(object):
     # if we do not have an open connection, then return now.
     if force is False:
       if self.hello is None: return
-
-    self._tty._tty_rawwrite('<rpc><close-session/></rpc>')
-    self._tty._tty_flush()
+    self._tty.rawwrite('<rpc><close-session/></rpc>')
+    # removed flush
 
   ### -------------------------------------------------------------------------
   ### Junos OS configuration methods
@@ -112,7 +111,7 @@ class tty_netconf(object):
       performing by this routine.
     """
     if not cmd.startswith('<'): cmd = '<{}/>'.format(cmd)
-    self._tty._tty_rawwrite('<rpc>{}</rpc>'.format(cmd))
+    self._tty.rawwrite('<rpc>{}</rpc>'.format(cmd))
     rsp = self._receive()    
     return rsp[0] # return first child after the <rpc-reply>
 
@@ -124,7 +123,7 @@ class tty_netconf(object):
     """ process the XML response into an XML object """
     rxbuf = []
     while True:
-      line = self._tty._tty_dev_read().strip()
+      line = self._tty.read().strip()
       if not line: continue                       # if we got nothin, go again
       if _NETCONF_EOM == line: break              # check for end-of-message
       rxbuf.append(line)
