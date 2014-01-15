@@ -72,7 +72,7 @@ class netconifyCmdo(object):
     p.add_argument('-M','--model', dest='EXPLICIT_model',
       help="EXPLICIT: Junos device model, identifies file in <prefix>/skel")
 
-    p.add_argument('-C', '--conf', dest='EXPLICIT_conf',
+    p.add_argument('-J', '--conf', dest='EXPLICIT_conf',
       help="EXPLICIT: Junos NOOB configuration file")
 
     ## ------------------------------------------------------------------------
@@ -85,6 +85,10 @@ class netconifyCmdo(object):
 
     p.add_argument('--no-save', action='store_true', default=False,
       help='Prevent files from begin saved into --savedir')
+
+    p.add_argument('-F','--facts', action='store_true',
+      dest='only_gather_facts',
+      help='Only gather facts and save them into --savedir')
 
     ## ------------------------------------------------------------------------
     ## directory controls
@@ -148,9 +152,12 @@ class netconifyCmdo(object):
       if self._args.passwd_prompt is True:
         self._args.passwd = getpass()
 
-      # handle dry-run mode and exit 
+      # if we just want to collect the facts then
+      # execute the dry_run_mode code
 
-      if self._args.dry_run_mode is True:
+      if self._args.only_gather_facts is True:
+        rc = self._only_gather_facts()
+      elif self._args.dry_run_mode is True:
         rc = self._dry_run()
       else:
         rc = self._netconify()
@@ -196,11 +203,24 @@ class netconifyCmdo(object):
     self._tty.logout()    
 
   ### -------------------------------------------------------------------------
+  ### only gather facts
+  ### -------------------------------------------------------------------------
+
+  def _only_gather_facts(self):
+    self._tty_login()
+    self._notify('facts','retrieving device facts...')    
+    self._tty.nc.facts.gather()
+    self._facts_save()
+    self._tty_logout()
+    return True    
+
+  ### -------------------------------------------------------------------------
   ### NETCONIFY the device!
   ### -------------------------------------------------------------------------
 
   def _netconify(self):
     self._tty_login()
+    self._notify('facts','retrieving device facts...')    
     self._tty.nc.facts.gather()
 
     model = self._tty.nc.facts.items['model']
@@ -220,6 +240,9 @@ class netconifyCmdo(object):
     """ push the configuration or rollback changes on error """
     rc = self._tty.nc.load(content=self.conf)
     if rc is not True:
+      import pdb
+      pdb.set_trace()
+
       self._notify('conf_ld_err','failure to load configuration, aborting.')
       self._tty.nc.rollback();
       return False
@@ -227,10 +250,13 @@ class netconifyCmdo(object):
     self._notify('conf','commit ... please be patient')
     rc = self._tty.nc.commit()
     if rc is not True:
+      import pdb
+      pdb.set_trace()
       self._notify('conf_save_err','faiure to commit configuration, aborting.')
       self._tty.nc.rollback()
       return False
 
+    self._notify('conf','commit completed.')
     return True
 
   ### -------------------------------------------------------------------------

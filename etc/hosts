@@ -11,11 +11,27 @@
 [all]
 gateway = 192.168.10.1
 domain = jls.net
-eth = ge-0/0/0
 
 [demosrx]
+eth = ge-0/0/0
 ipaddr = 192.168.10.41/24
 
 [srx210-j2]
-ipaddr = dhcp
 eth = ge-0/0/1
+ipaddr = dhcp
+
+[ex1]
+eth = me0
+ipaddr = 192.168.10.21/24
+
+[ex2]
+eth = me0
+ipaddr = 192.168.10.22/24
+
+[ex3]
+eth = me0
+ipaddr = 192.168.10.23/24
+
+[ex4]
+eth = me0
+ipaddr = 192.168.10.24/24

@@ -17,13 +17,13 @@ class Facts(object):
     pkginfo = rsp.xpath('.//package-information[name = "junos"]/comment')[0].text    
 
     self.facts['version'] = re.findall(r'\[(.*)\]', pkginfo)[0]
-    self.facts['model'] = rsp.findtext('product-model').upper()
     self.facts['hostname'] = rsp.findtext('host-name')
 
   def chassis(self):
     rsp = self.rpc('get-chassis-inventory')
     chas = rsp.find('chassis')
     sn = chas.findtext('serial-number')
+    self.facts['model'] = chas.findtext('description').upper()
 
     # use the chassis level serial number, and if that doesn't exist
     # look for the 'Backplane' serial number

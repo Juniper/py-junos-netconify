@@ -85,7 +85,9 @@ class tty_netconf(object):
     :True: otherwise return the response as XML for further processing.
     """
     rsp = self.rpc('<commit-configuration/>')
-    return True if 'ok' == rsp.tag else rsp
+#    if 'ok' == rsp.tag: return True
+    if len(rsp.xpath('.//commit-success')) > 0: return True
+    return rsp
 
   def rollback(self):
     """ rollback that recent changes """
