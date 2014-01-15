@@ -106,9 +106,9 @@ class Terminal(object):
     # close the NETCONF session, handles case if not open.
     self.nc.close()
 
-    # issue the 'exit' command and then cleanly
-    # shutdown the TTY. 
-
+    # wait for the prompt to return back, and then issue the 'exit' command.
+    # cleanly shutdown the TTY. 
+    self.read_prompt()
     self.write('exit')    
     self._tty_close()
 
@@ -141,6 +141,9 @@ class Terminal(object):
     def _ev_bad_passwd():
       self.state = self._ST_BAD_PASSWD
       self.write('\n')
+      self._badpasswd += 1
+      if self._badpasswd == 2:
+        raise RuntimeError("bad_passwd")
       # return through and try again ... could have been
       # prior failed attempt
 

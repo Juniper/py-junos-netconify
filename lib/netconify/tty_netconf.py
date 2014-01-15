@@ -50,7 +50,8 @@ class tty_netconf(object):
     # if we do not have an open connection, then return now.
     if force is False:
       if self.hello is None: return
-    self._tty.rawwrite('<rpc><close-session/></rpc>')
+
+    self.rpc('close-session')
     # removed flush
 
   ### -------------------------------------------------------------------------
