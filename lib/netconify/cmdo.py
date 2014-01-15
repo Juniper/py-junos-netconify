@@ -213,8 +213,8 @@ class netconifyCmdo(object):
     self._notify('conf','loading into device ...')
 
     ### HACK
-    self._tty_logout()
-    return True
+    # self._tty_logout()
+    # return True
     ### HACK
 
 
