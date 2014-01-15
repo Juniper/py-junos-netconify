@@ -10,25 +10,6 @@ __all__ = ['Terminal']
 ##### Terminal class
 ##### =========================================================================
 
-# _RE_PAT_login = '(?P<login>ogin:\s*$)'
-# _RE_PAT_passwd = '(?P<passwd>assword:\s*$)'
-# _RE_PAT_bad_passwd = '(?P<badpasswd>ogin incorrect)'
-# _RE_PAT_shell = '(?P<shell>%\s*$)'
-# _RE_PAT_cli = '(?P<cli>>\s*$)'
-
-# _RE_expect = re.compile("{}|{}|{}|{}|{}".format(_RE_PAT_login,
-#   _RE_PAT_passwd, _RE_PAT_shell, _RE_PAT_cli, _RE_PAT_bad_passwd))
-
-_RE_PAT = [
-  '(?P<login>ogin:\s*$)',
-  '(?P<passwd>assword:\s*$)',
-  '(?P<badpasswd>ogin incorrect)',
-  '(?P<shell>%\s*$)',
-  '(?P<cli>>\s*$)'
-]
-
-_RE_expect = re.compile('|'.join(_RE_PAT))
-
 class Terminal(object):
   """
   Terminal is used to bootstrap Junos New Out of the Box (NOOB) device
@@ -52,40 +33,38 @@ class Terminal(object):
   _ST_PASSWD = 2
   _ST_DONE = 3
   _ST_BAD_PASSWD = 4
+  _ST_NC_HUNG = 5
+
+  _RE_PAT = [
+    '(?P<login>ogin:\s*$)',
+    '(?P<passwd>assword:\s*$)',
+    '(?P<badpasswd>ogin incorrect)',
+    '(?P<shell>%\s*$)',
+    '(?P<cli>[^\\-]>\s*$)'
+  ]  
 
   ##### -----------------------------------------------------------------------
   ##### CONSTRUCTOR
   ##### -----------------------------------------------------------------------
 
-  def __init__(self, port, **kvargs):
+  def __init__(self, **kvargs):
     """
-    :port:
-      identifies the tty port, as provided by the subclass
-
     :kvargs['user']:
       defaults to 'root'
 
     :kvargs['passwd']:
       defaults to empty; NOOB Junos devics there is
       no root password initially
-
-    :kvargs['timeout']:
-      this is the serial readline() polling timeout.  
-      generally you should not have to tweak this.
-    """
-    # init args
-    self.port = port
+    """    
+    # logic args
     self.user = kvargs.get('user','root')
     self.passwd = kvargs.get('passwd','')
-
-    # initialize the underlying TTY device
-    self._tty_dev_init(port, kvargs)
 
     # misc setup
     self.nc = tty_netconf( self )
     self.state = self._ST_INIT
-    self._badpasswd = 0
     self.notifier = None
+    self._badpasswd = 0    
 
   ##### -----------------------------------------------------------------------
   ##### Login/logout 
@@ -102,33 +81,37 @@ class Terminal(object):
     """
     self.notifier = notify
     self.notify('login','connecting to terminal port ...')    
-    self._tty_dev_open()
-    self.write('\n\n\n')
+    self._tty_open()
 
     self.notify('login','logging in ...')
+
     self.state = self._ST_INIT
     self._login_state_machine()
 
     # now start NETCONF XML 
     self.notify('login','starting NETCONF')
-    self.nc.open(at_shell = self.at_shell)
+    self.nc.open(at_shell = self.at_shell)    
     return True
 
   def logout(self):
     """
-    close down the NETCONF session and cleanly logout of the 
-    serial console port
+    cleanly logout of the TTY
     """
-    # close the NETCONF XML
-
     self.notify('logout','logging out ...')
-    if self.nc.hello is not None:
-      self.nc.close()
 
-    # assume at unix-shell
+    # close the NETCONF session
+    self.nc.close()
+
+    # hit <ENTER> and get back to a prompt
     self.write('\n')
-    self.read(_RE_expect)
-    self._tty_dev_close()
+    self.read_prompt()
+
+    # issue the 'exit' command and then cleanly
+    # shutdown the TTY. 
+
+    self.write('exit')    
+    self._tty_close()
+
     return True
 
   ##### -----------------------------------------------------------------------
@@ -139,7 +122,7 @@ class Terminal(object):
     if 10 == attempt: 
       raise RuntimeError('login_sm_failure')
 
-    prompt,found = self.read(_RE_expect)
+    prompt,found = self.read_prompt()
 
 #    print "CUR-STATE:{}".format(self.state)
 #    print "IN:{}:`{}`".format(found,prompt)
@@ -160,15 +143,28 @@ class Terminal(object):
     def _ev_hungnetconf():
       if self._ST_INIT == self.state:
         # assume we're in a hung state from XML-MODE. issue the 
-        # NETCONF close command 
-        self.nc.close()
+        # NETCONF close command, but set the state to NC_HUNG
+#        print "DEBUG: burp netconf."
+        self.state = self._ST_NC_HUNG
+        self.nc.close(force=True)
 
     def _ev_shell():
+      if self.state == self._ST_INIT:
+        # this means that the shell was left
+        # open.  probably not a good thing,
+        # so issue a notify, but move on.
+        self.notify('login','shell login was open!')
+
       self.at_shell = True
       self.state = self._ST_DONE      
       # if we are here, then we are done
 
     def _ev_cli():
+      if self.state == self._ST_INIT:
+        # in bad state, return now and retry        
+#        print "DEUBG: burp cli."
+        return
+
       self.at_shell = False
       self.state = self._ST_DONE
 

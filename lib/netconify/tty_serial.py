@@ -9,46 +9,48 @@ from .tty_terminal import Terminal
 ##### Terminal connection over SERIAL CONSOLE
 ##### -------------------------------------------------------------------------
 
+_PROMPT = re.compile('|'.join(Terminal._RE_PAT))
+
 class Serial(Terminal):
+
   def __init__(self, port='/dev/ttyUSB0', **kvargs):
     """
     :port:
       the serial port, defaults to USB0 since this
-    """
-    Terminal.__init__(self, port, **kvargs)
 
-  def _tty_dev_init(self, port, kvargs):
-    # setup the serial port, but defer open to :login():
+    :kvargs['timeout']:
+      this is the tty read polling timeout.  
+      generally you should not have to tweak this.      
+    """
+    # initialize the underlying TTY device
+
+    self.port = port
     self._ser = serial.Serial()    
     self._ser.port = port
     self._ser.timeout = kvargs.get('timeout', self.TIMEOUT)
 
-  def _tty_dev_open(self):
-    self._ser.open()    
+    Terminal.__init__(self, **kvargs)
 
-  def _tty_dev_close(self):
-    self._ser.write('exit\n')
-    self._ser.flush()
+  ### -------------------------------------------------------------------------
+  ### I/O open close called from Terminal class
+  ### -------------------------------------------------------------------------
+
+  def _tty_open(self):
+    self._ser.open()    
+    self.write('\n\n\n')      # hit <ENTER> a few times, yo!    
+
+  def _tty_close(self):
     self._ser.close()
 
-  def _tty_dev_write(self,content):
-    """ write the :context: to the serial port and then immediately flush """
+  ### -------------------------------------------------------------------------
+  ### I/O read and write called from Terminal class
+  ### -------------------------------------------------------------------------
+
+  def write(self, content):
     self._ser.write(content+'\n')
     self._ser.flush()
 
-  def _tty_dev_rawwrite(self,content):
-    self._ser.write(content)
-
-  def _tty_dev_flush(self):
-    self._ser.flush()        
-
-  def _tty_dev_read(self):
-    return self._ser.readline()    
-
-  def write(self, content):
-    self._tty_dev_write(content)
-
-  def read(self, expect):
+  def read_prompt(self):
     """
     reads text from the serial console (using readline) until
     a match is found against the :expect: regular-expression object.
@@ -66,10 +68,23 @@ class Serial(Terminal):
       line = self._ser.readline()
       if not line: continue
       rxb += line
-      found = expect.search( rxb ) 
+      found = _PROMPT.search( rxb ) 
       if found is not None: break         # done reading
     else:
       # exceeded the while loop timeout
       return (None,None)
 
-    return (rxb, found.lastgroup)    
+    return (rxb, found.lastgroup)   
+
+  ### -------------------------------------------------------------------------
+  ### I/O LOW-LEVEL read and write called internally
+  ### -------------------------------------------------------------------------
+
+  def _tty_rawwrite(self,content):
+    self._ser.write(content)
+
+  def _tty_flush(self):
+    self._ser.flush()        
+
+  def _tty_dev_read(self):
+    return self._ser.readline()  

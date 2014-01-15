@@ -1,5 +1,3 @@
-import pdb
-
 import re, time
 import jinja2
 from lxml import etree
@@ -21,47 +19,44 @@ _junosns_strip = lambda text: _junosns.sub('',text)
 
 class tty_netconf(object):
   """
-  provides access to the Junos XML API when bootstraping through the 
-  serial console port
+  Basic Junos XML API for bootstraping through the TTY
   """  
 
   def __init__(self, tty):
-    """
-    :serial: is serial.Serial object 
-    """
     self._tty = tty
     self.hello = None
     self.facts = Facts(self)
 
-  def _receive(self):
-    """ process the XML response into an XML object """
-    rxbuf = []
-    while True:
-      line = self._tty._tty_dev_read().strip()
-      if not line: continue                       # if we got nothin, go again
-      if _NETCONF_EOM == line: break              # check for end-of-message
-      rxbuf.append(line)
-
-    rxbuf[0] = _xmlns_strip(rxbuf[0])         # nuke the xmlns
-    rxbuf[1] = _xmlns_strip(rxbuf[1])         # nuke the xmlns
-    rxbuf = map(_junosns_strip, rxbuf)        # nuke junos: namespace
-
-    return etree.XML(''.join(rxbuf))
+  ### -------------------------------------------------------------------------
+  ### NECONF session open and close
+  ### -------------------------------------------------------------------------
 
   def open(self, at_shell):
     """ start the XML API process and receive the 'hello' message """
-    nc_cmd = (
-      'junoscript netconf need-trailer',
-      'xml-mode netconf need-trailer'
-    )[at_shell]
 
-    self._tty._tty_dev_write(nc_cmd)
+    nc_cmd = ('junoscript' ,'xml-mode')[at_shell]
+    self._tty.write( nc_cmd+' netconf need-trailer' )
+
     while True:
       time.sleep(0.1)
       line = self._tty._tty_dev_read()
       if line.startswith("<!--"): break
 
     self.hello = self._receive()
+
+  def close(self, force=False):
+    """ issue the XML API to close the session """
+
+    # if we do not have an open connection, then return now.
+    if force is False:
+      if self.hello is None: return
+
+    self._tty._tty_rawwrite('<rpc><close-session/></rpc>')
+    self._tty._tty_flush()
+
+  ### -------------------------------------------------------------------------
+  ### Junos OS configuration methods
+  ### -------------------------------------------------------------------------
 
   def load(self, content, **kvargs):
     """
@@ -97,23 +92,45 @@ class tty_netconf(object):
     cmd = E('load-configuration', dict(compare='rollback', rollback="0"))
     return self.rpc(etree.tostring(cmd))
 
+  ### -------------------------------------------------------------------------
+  ### XML RPC command execution
+  ### -------------------------------------------------------------------------
+
   def rpc(self,cmd):
     """ 
-    Write the XML cmd and return the response
+    Write the XML cmd and return the response as XML object.
 
-    :cmd: is a <str> of the XML command
-    Return value is an XML object.  No error checking is performed.
+    :cmd: 
+      <str> of the XML command.  if the :cmd: is not XML, then
+      this routine will perform the brackets; i.e. if given
+      'get-software-information', this routine will turn
+      it into '<get-software-information/>'
+
+    NOTES:
+      The return XML object is the first child element after
+      the <rpc-reply>.  There is also no error-checking
+      performing by this routine.
     """
-
     if not cmd.startswith('<'): cmd = '<{}/>'.format(cmd)
-    self._tty._tty_dev_rawwrite('<rpc>')
-    self._tty._tty_dev_rawwrite(cmd)
-    self._tty._tty_dev_rawwrite('</rpc>')
-
-    rsp = self._receive()
+    self._tty._tty_rawwrite('<rpc>{}</rpc>'.format(cmd))
+    rsp = self._receive()    
     return rsp[0] # return first child after the <rpc-reply>
 
-  def close(self):
-    """ issue the XML API to close the session """
-    self._tty._tty_dev_rawwrite('<rpc><close-session/></rpc>')
-    self._tty._tty_dev_flush()
+  ### -------------------------------------------------------------------------
+  ### LOW-LEVEL I/O for reading back XML response
+  ### -------------------------------------------------------------------------
+
+  def _receive(self):
+    """ process the XML response into an XML object """
+    rxbuf = []
+    while True:
+      line = self._tty._tty_dev_read().strip()
+      if not line: continue                       # if we got nothin, go again
+      if _NETCONF_EOM == line: break              # check for end-of-message
+      rxbuf.append(line)
+
+    rxbuf[0] = _xmlns_strip(rxbuf[0])         # nuke the xmlns
+    rxbuf[1] = _xmlns_strip(rxbuf[1])         # nuke the xmlns
+    rxbuf = map(_junosns_strip, rxbuf)        # nuke junos: namespace
+
+    return etree.XML(''.join(rxbuf))
