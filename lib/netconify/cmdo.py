@@ -212,6 +212,12 @@ class netconifyCmdo(object):
     self._facts_save()
     self._notify('conf','loading into device ...')
 
+    ### HACK
+    self._tty_logout()
+    return True
+    ### HACK
+
+
     rc = self._tty.nc.load(content=self.conf)
     if rc is not True:
       self._notify('conf_ld_err','failure to load configuration, aborting.')

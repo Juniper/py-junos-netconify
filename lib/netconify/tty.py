@@ -35,8 +35,10 @@ class Terminal(object):
   _ST_BAD_PASSWD = 4
   _ST_NC_HUNG = 5
 
+  _re_pat_login = '(?P<login>ogin:\s*$)'
+
   _RE_PAT = [
-    '(?P<login>ogin:\s*$)',
+    _re_pat_login,
     '(?P<passwd>assword:\s*$)',
     '(?P<badpasswd>ogin incorrect)',
     '(?P<shell>%\s*$)',
@@ -70,18 +72,18 @@ class Terminal(object):
   def tty_name(self):
     return self._tty_name
 
-  ##### -----------------------------------------------------------------------
-  ##### Login/logout 
-  ##### -----------------------------------------------------------------------
-
   def notify(self,event,message):
     if not self.notifier: return
     self.notifier(event,message)
 
+  ##### -----------------------------------------------------------------------
+  ##### Login/logout 
+  ##### -----------------------------------------------------------------------
+
   def login(self, notify=None):
     """
-    open the serial connection and login.  once the login
-    is successful, start the netconf XML API
+    open the TTY connection and login.  once the login is successful, 
+    start the NETCONF XML API process
     """
     self.notifier = notify
     self.notify('login','connecting to TTY:{} ...'.format(self.tty_name))    
@@ -102,20 +104,43 @@ class Terminal(object):
     cleanly logout of the TTY
     """
     self.notify('logout','logging out ...')
-
-    # close the NETCONF session, handles case if not open.
     self.nc.close()
-
-    # wait for the prompt to return back, and then issue the 'exit' command.
-    # cleanly shutdown the TTY. 
-    self.read_prompt()
-    self.write('exit')    
-    self._tty_close()
-
+    self._logout_state_machine()
     return True
 
-  def abort_change(self):
-    return True
+  ##### -----------------------------------------------------------------------
+  ##### TTY logout state-machine
+  ##### -----------------------------------------------------------------------
+
+  def _logout_state_machine(self, attempt=0):
+    if 10 == attempt: 
+      raise RuntimeError('logout_sm_failure')
+
+    prompt,found = self.read_prompt()
+
+    def _ev_login():
+      # back at login prompt, so we are cleanly done!
+      self._tty_close()
+
+    def _ev_shell():
+      self.write('exit')
+
+    def _ev_cli():
+      self.write('exit')
+
+    _ev_tbl = {
+      'login': _ev_login,
+      'shell': _ev_shell,
+      'cli': _ev_cli
+    }
+
+    _ev_tbl[found]()
+
+    if found == 'login':
+      return True
+    else:
+      sleep(1)
+      self._logout_state_machine( attempt=attempt+1 )
 
   ##### -----------------------------------------------------------------------
   ##### TTY login state-machine
