@@ -7,30 +7,27 @@ from .tty_netconf import tty_netconf
 __all__ = ['Terminal']
 
 ##### =========================================================================
-##### Serial class
+##### Terminal class
 ##### =========================================================================
 
-# _RE_PAT_login = '(?P<login>ogin:\s?$)'
-# _RE_PAT_passwd = '(?P<passwd>assword:\s?$)*'
-# _RE_PAT_shell = '(?P<shell>%\s?$)'
-# _RE_PAT_cli = '(?P<cli>>\s?$)'
+# _RE_PAT_login = '(?P<login>ogin:\s*$)'
+# _RE_PAT_passwd = '(?P<passwd>assword:\s*$)'
+# _RE_PAT_bad_passwd = '(?P<badpasswd>ogin incorrect)'
+# _RE_PAT_shell = '(?P<shell>%\s*$)'
+# _RE_PAT_cli = '(?P<cli>>\s*$)'
 
-# _RE_prompt = re.compile('{}|{}|{}'.format(_RE_PAT_login,_RE_PAT_passwd,_RE_PAT_shell))
-# _RE_login = re.compile(_RE_PAT_login)
-# _RE_shell = re.compile(_RE_PAT_shell)
-# _RE_passwd_or_shell = re.compile("{}|{}$".format(_RE_PAT_passwd,_RE_PAT_shell))
+# _RE_expect = re.compile("{}|{}|{}|{}|{}".format(_RE_PAT_login,
+#   _RE_PAT_passwd, _RE_PAT_shell, _RE_PAT_cli, _RE_PAT_bad_passwd))
 
-_RE_PAT_login = '(?P<login>ogin:\s*$)'
-_RE_PAT_passwd = '(?P<passwd>assword:\s*$)'
-_RE_PAT_bad_passwd = '(?P<badpasswd>ogin incorrect)'
-_RE_PAT_shell = '(?P<shell>%\s*$)'
-_RE_PAT_cli = '(?P<cli>>\s*$)'
+_RE_PAT = [
+  '(?P<login>ogin:\s*$)',
+  '(?P<passwd>assword:\s*$)',
+  '(?P<badpasswd>ogin incorrect)',
+  '(?P<shell>%\s*$)',
+  '(?P<cli>>\s*$)'
+]
 
-_RE_expect = re.compile("{}|{}|{}|{}|{}".format(_RE_PAT_login,
-  _RE_PAT_passwd, _RE_PAT_shell, _RE_PAT_cli, _RE_PAT_bad_passwd))
-
-# _RE_expect = re.compile("{}|{}|{}|{}".format(_RE_PAT_login,
-#   _RE_PAT_passwd, _RE_PAT_shell, _RE_PAT_cli))
+_RE_expect = re.compile('|'.join(_RE_PAT))
 
 class Terminal(object):
   """
@@ -144,8 +141,8 @@ class Terminal(object):
 
     prompt,found = self.read(_RE_expect)
 
-    print "CUR-STATE:{}".format(self.state)
-    print "IN:{}:{}".format(found,prompt)
+#    print "CUR-STATE:{}".format(self.state)
+#    print "IN:{}:`{}`".format(found,prompt)
 
     def _ev_login():
       self.state = self._ST_LOGIN
@@ -156,10 +153,9 @@ class Terminal(object):
       self.write( self.passwd )
 
     def _ev_bad_passwd():
-      self.state = self._ST_BAD_PASSWD 
-      self._badpasswd += 1
-      if self._badpasswd > 3:
-        raise RuntimeError('bad_passwd')
+      self.state = self._ST_BAD_PASSWD
+      self.write('\n')
+      raise RuntimeError('bad_passwd')
 
     def _ev_hungnetconf():
       if self._ST_INIT == self.state:
@@ -189,6 +185,5 @@ class Terminal(object):
     if self.state == self._ST_DONE:
       return True
     else:
-      print "NEW-STATE:{}".format(self.state)
       # if we are here, then loop the event again
       self._login_state_machine(attempt+1)
