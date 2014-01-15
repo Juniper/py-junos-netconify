@@ -29,6 +29,8 @@ class Serial(Terminal):
     self._ser.port = port
     self._ser.timeout = kvargs.get('timeout', self.TIMEOUT)
 
+    self._tty_name = self.port
+
     Terminal.__init__(self, **kvargs)
 
   ### -------------------------------------------------------------------------
@@ -40,6 +42,7 @@ class Serial(Terminal):
     self.write('\n\n\n')      # hit <ENTER> a few times, yo!    
 
   def _tty_close(self):
+    self._ser.flush()
     self._ser.close()
 
   ### -------------------------------------------------------------------------
@@ -49,6 +52,7 @@ class Serial(Terminal):
   def write(self, content):
     """ write content + <RETURN> """
     self._ser.write(content+'\n')
+    self._ser.flush()
 
   def rawwrite(self,content):
     self._ser.write(content)

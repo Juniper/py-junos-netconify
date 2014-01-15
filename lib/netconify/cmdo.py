@@ -90,8 +90,9 @@ class netconifyCmdo(object):
     ## directory controls
     ## ------------------------------------------------------------------------
 
-    p.add_argument('--prefix', default=self.PREFIX, 
-      help='override path to etc files')
+    p.add_argument('--confdir', default=self.PREFIX, 
+      dest='prefix',   # hack for now.
+      help='override path to etc directory configuration files')
 
     p.add_argument('--savedir', nargs='?', default='.', 
       help="Files are saved into this directory, CWD by default")
@@ -128,6 +129,7 @@ class netconifyCmdo(object):
   ### -------------------------------------------------------------------------
 
   def run(self):
+    rc = True
     try:
       
       # build up the necessary NOOB variables
@@ -149,12 +151,14 @@ class netconifyCmdo(object):
       # handle dry-run mode and exit 
 
       if self._args.dry_run_mode is True:
-        self._dry_run()
+        rc = self._dry_run()
       else:
-        self._netconify()
+        rc = self._netconify()
 
     except RuntimeError as rterr:
       self._err_hanlder(rterr)
+
+    return rc
 
   def _err_hanlder(self, err):
     sys.stderr.write("ERROR: {}\n".format(err.message))
@@ -196,6 +200,7 @@ class netconifyCmdo(object):
   ### -------------------------------------------------------------------------
 
   def _netconify(self):
+
     self._tty_login()
     self._tty.nc.facts.gather()
 
@@ -209,14 +214,27 @@ class netconifyCmdo(object):
 
     rc = self._tty.nc.load(content=self.conf)
     if rc is not True:
-      raise RuntimeError('load_error')
+      self._notify('conf_ld_err','failure to load configuration, aborting.')
+      self._tty.nc.rollback();
+      self._tty_logout()
+      return False
+      ###
+      ### --- unreachable ---
+      ###      
 
     self._notify('conf','commit ... please be patient')
     rc = self._tty.nc.commit()
     if rc is not True:
-      raise RuntimeError('commit_error')
+      self._notify('conf_save_err','faiure to commit configuration, aborting.')
+      self._tty.nc.rollback()
+      self._tty_logout()
+      return False
+      ###
+      ### --- unreachable ---
+      ###      
 
     self._tty_logout()
+    return True
 
   ### -------------------------------------------------------------------------
   ### dry-run mode is used to create the configuraiton file only
@@ -243,7 +261,8 @@ class netconifyCmdo(object):
       path = os.path.join(self._args.prefix, 'skel', model+'.conf')
 
     # now build the conf file, and ensure that it will get saved
-    self._conf_build(path)
+    self._conf_build(path)    
+    return True
 
   ### -------------------------------------------------------------------------
   ### configuration file build/save methods

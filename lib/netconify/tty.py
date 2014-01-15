@@ -40,7 +40,7 @@ class Terminal(object):
     '(?P<passwd>assword:\s*$)',
     '(?P<badpasswd>ogin incorrect)',
     '(?P<shell>%\s*$)',
-    '(?P<cli>[^\\-]>\s*$)'
+    '(?P<cli>[^\\-"]>\s*$)'
   ]  
 
   ##### -----------------------------------------------------------------------
@@ -66,6 +66,10 @@ class Terminal(object):
     self.notifier = None
     self._badpasswd = 0    
 
+  @property
+  def tty_name(self):
+    return self._tty_name
+
   ##### -----------------------------------------------------------------------
   ##### Login/logout 
   ##### -----------------------------------------------------------------------
@@ -80,7 +84,7 @@ class Terminal(object):
     is successful, start the netconf XML API
     """
     self.notifier = notify
-    self.notify('login','connecting to terminal port ...')    
+    self.notify('login','connecting to TTY:{} ...'.format(self.tty_name))    
     self._tty_open()
 
     self.notify('login','logging in ...')
@@ -99,12 +103,8 @@ class Terminal(object):
     """
     self.notify('logout','logging out ...')
 
-    # close the NETCONF session
+    # close the NETCONF session, handles case if not open.
     self.nc.close()
-
-    # hit <ENTER> and get back to a prompt
-    self.write('\n')
-    self.read_prompt()
 
     # issue the 'exit' command and then cleanly
     # shutdown the TTY. 
@@ -112,6 +112,9 @@ class Terminal(object):
     self.write('exit')    
     self._tty_close()
 
+    return True
+
+  def abort_change(self):
     return True
 
   ##### -----------------------------------------------------------------------
@@ -138,13 +141,13 @@ class Terminal(object):
     def _ev_bad_passwd():
       self.state = self._ST_BAD_PASSWD
       self.write('\n')
-      raise RuntimeError('bad_passwd')
+      # return through and try again ... could have been
+      # prior failed attempt
 
     def _ev_hungnetconf():
       if self._ST_INIT == self.state:
         # assume we're in a hung state from XML-MODE. issue the 
         # NETCONF close command, but set the state to NC_HUNG
-#        print "DEBUG: burp netconf."
         self.state = self._ST_NC_HUNG
         self.nc.close(force=True)
 
@@ -153,7 +156,7 @@ class Terminal(object):
         # this means that the shell was left
         # open.  probably not a good thing,
         # so issue a notify, but move on.
-        self.notify('login','shell login was open!')
+        self.notify('login_warn','shell login was open!')
 
       self.at_shell = True
       self.state = self._ST_DONE      
@@ -161,10 +164,11 @@ class Terminal(object):
 
     def _ev_cli():
       if self.state == self._ST_INIT:
-        # this means that the shell was left
-        # open.  probably not a good thing,
-        # so issue a notify, but move on.
-        self.notify('login','CLI login was open!')
+        # this means that the shell was left open.  probably not a good thing,
+        # so issue a notify, hit <ENTER> and try again just to be sure...
+        self.notify('login_warn','waiting on TTY.')
+        sleep(5)
+        return
 
       self.at_shell = False
       self.state = self._ST_DONE
