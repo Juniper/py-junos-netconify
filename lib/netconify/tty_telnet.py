@@ -25,6 +25,7 @@ class Telnet(Terminal):
     self.host = host
     self.port = port
     self.timeout = kvargs.get('timeout', self.TIMEOUT)
+    self._tty_name = "{}:{}".format(host,port)
 
     Terminal.__init__(self, **kvargs)  
 
@@ -33,7 +34,10 @@ class Telnet(Terminal):
   ### -------------------------------------------------------------------------
 
   def _tty_open(self):
-    self._tn.open(self.host,self.port,self.timeout)
+    try:
+      self._tn.open(self.host,self.port,self.timeout)
+    except:
+      raise RuntimeError("open_fail: port not ready")      
     self.write('\n')
 
   def _tty_close(self):
@@ -58,6 +62,9 @@ class Telnet(Terminal):
   def read_prompt(self):
     got = self._tn.expect(Terminal._RE_PAT, self.EXPECT_TIMEOUT)
     sre = got[1]
+
+    if 'in use' in got[2]:
+      raise RuntimeError("open_fail: port already in use")
 
     # (buffer, RE group)
     return (None,None) if not got[1] else (got[2], got[1].lastgroup)

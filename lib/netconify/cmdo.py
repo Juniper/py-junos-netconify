@@ -190,10 +190,7 @@ class netconifyCmdo(object):
       tty_args['baud'] = self._args.baud
       self._tty = netconify.Serial(**tty_args)
 
-    try:
-      self._tty.login( notify=self._tty_notifier )
-    except OSError as err:
-      raise RuntimeError("open_fail:{}".format(err.strerror))
+    self._tty.login( notify=self._tty_notifier )
 
   def _tty_logout(self):
     self._tty.logout()    
