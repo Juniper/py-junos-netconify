@@ -69,10 +69,10 @@ class netconifyCmdo(object):
     ## auto-detecting based on read parameters
     ## ------------------------------------------------------------------------
 
-    p.add_argument('-M','--model', dest='EXPLICIT_model',
+    p.add_argument('-m','--model', dest='EXPLICIT_model',
       help="EXPLICIT: Junos device model, identifies file in <prefix>/skel")
 
-    p.add_argument('-J', '--conf', dest='EXPLICIT_conf',
+    p.add_argument('-j', '--conf', dest='EXPLICIT_conf',
       help="EXPLICIT: Junos NOOB configuration file")
 
     ## ------------------------------------------------------------------------
@@ -94,24 +94,24 @@ class netconifyCmdo(object):
     ## directory controls
     ## ------------------------------------------------------------------------
 
-    p.add_argument('--confdir', default=self.PREFIX, 
+    p.add_argument('-C','--confdir', default=self.PREFIX, 
       dest='prefix',   # hack for now.
       help='override path to etc directory configuration files')
 
-    p.add_argument('--savedir', nargs='?', default='.', 
+    p.add_argument('-S','--savedir', nargs='?', default='.', 
       help="Files are saved into this directory, CWD by default")
 
     ## ------------------------------------------------------------------------
     ## tty port configuration
     ## ------------------------------------------------------------------------
 
-    p.add_argument('-P','--port', default='/dev/ttyUSB0',
+    p.add_argument('-p','--port', default='/dev/ttyUSB0',
       help="serial port device")
 
     p.add_argument('--baud', default='9600',
       help="serial port baud rate")
 
-    p.add_argument('-T', '--telnet',
+    p.add_argument('-t', '--telnet',
       help='telnet/terminal server, <host>:<port>')
 
     ## ------------------------------------------------------------------------
@@ -121,7 +121,7 @@ class netconifyCmdo(object):
     p.add_argument('-u','--user', default='root',
       help='login user name, defaults to "root"')
 
-    p.add_argument('-p','--passwd', default='',
+    p.add_argument('-P','--passwd', default='',
       help='login user password, *empty* for NOOB')
 
     p.add_argument('-k', action='store_true', default=False,
@@ -240,9 +240,6 @@ class netconifyCmdo(object):
     """ push the configuration or rollback changes on error """
     rc = self._tty.nc.load(content=self.conf)
     if rc is not True:
-      import pdb
-      pdb.set_trace()
-
       self._notify('conf_ld_err','failure to load configuration, aborting.')
       self._tty.nc.rollback();
       return False
@@ -250,8 +247,6 @@ class netconifyCmdo(object):
     self._notify('conf','commit ... please be patient')
     rc = self._tty.nc.commit()
     if rc is not True:
-      import pdb
-      pdb.set_trace()
       self._notify('conf_save_err','faiure to commit configuration, aborting.')
       self._tty.nc.rollback()
       return False
