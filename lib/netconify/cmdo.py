@@ -6,6 +6,7 @@ import os, sys, json
 import argparse, jinja2
 from ConfigParser import SafeConfigParser
 from getpass import getpass
+from lxml import etree
 
 import netconify
 
@@ -327,11 +328,19 @@ class netconifyCmdo(object):
     with open(path,'w+') as f: f.write(self.conf)
 
   def _facts_save(self):
-    fname = (self._name or self.DEFAULT_NAME)+'.json'
+    # save basic facts as JSON file
+    fname = (self._name or self.DEFAULT_NAME)+'-facts.json'
     path = os.path.join(self._args.savedir, fname)
     self._notify('facts','saving: {}'.format(path))
     as_json = json.dumps(self._tty.nc.facts.items)
     with open(path,'w+') as f: f.write(as_json)
+
+    # also save the inventory as XML file
+    fname = (self._name or self.DEFAULT_NAME)+'-inventory.xml'
+    path = os.path.join(self._args.savedir, fname)
+    self._notify('inventory','saving: {}'.format(path))
+    as_xml = etree.tostring(self._tty.nc.facts.inventory, pretty_print=True)
+    with open(path,'w+') as f: f.write(as_xml)
 
   ### -------------------------------------------------------------------------
   ### load the inventory file

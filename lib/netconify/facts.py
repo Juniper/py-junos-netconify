@@ -21,6 +21,7 @@ class Facts(object):
 
   def chassis(self):
     rsp = self.rpc('get-chassis-inventory')
+    self.inventory = rsp    # keep this since we want to save the data to file
     chas = rsp.find('chassis')
     sn = chas.findtext('serial-number')
     self.facts['model'] = chas.findtext('description').upper()
