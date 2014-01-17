@@ -1,4 +1,6 @@
+from time import sleep
 import telnetlib
+
 from .tty import Terminal
 
 ##### -------------------------------------------------------------------------
@@ -6,6 +8,9 @@ from .tty import Terminal
 ##### -------------------------------------------------------------------------
 
 class Telnet(Terminal):
+  RETRY_OPEN = 3                # number of attempts to open TTY
+  RETRY_BACKOFF = 2             # seconds to wait between retries
+
   def __init__(self, host, port, **kvargs):
     """
     :host:
@@ -34,10 +39,18 @@ class Telnet(Terminal):
   ### -------------------------------------------------------------------------
 
   def _tty_open(self):
-    try:
-      self._tn.open(self.host,self.port,self.timeout)
-    except:
-      raise RuntimeError("open_fail: port not ready")      
+    retry = self.RETRY_OPEN
+    while retry > 0:
+      try:
+        self._tn.open(self.host,self.port,self.timeout)
+        break
+      except:
+        retry -= 1
+#        print "TTY busy, checking back in {} ...".format(self.RETRY_BACKOFF)
+        sleep(self.RETRY_BACKOFF)
+    else:
+        raise RuntimeError("open_fail: port not ready")      
+
     self.write('\n')
 
   def _tty_close(self):
