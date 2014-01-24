@@ -330,7 +330,7 @@ class netconifyCmdo(object):
     try:
       self._tty_login()
     except:
-      self._notify('login','Failure to login, check TTY')
+      self._notify('login','Failure to login, check TTY, could be in use already.')
       return False
 
     self._tty.nc.facts.version()          # only version, gets model, too
