@@ -327,7 +327,12 @@ class netconifyCmdo(object):
 
     # login to the device and verify that this is a supported QFX node
 
-    self._tty_login()
+    try:
+      self._tty_login()
+    except:
+      self._notify('login','Failure to login, check TTY')
+      return False
+
     self._tty.nc.facts.version()          # only version, gets model, too
     facts = self._tty.nc.facts.items
 
