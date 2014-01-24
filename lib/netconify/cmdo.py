@@ -349,7 +349,7 @@ class netconifyCmdo(object):
       # nothing to do
       self._notify('qfx','No change required')
     else:
-      self._notify('qfx','Change required')
+      self._notify('qfx','Action required')
       need_change = True
 
     if self._args.dry_run_mode is True:
