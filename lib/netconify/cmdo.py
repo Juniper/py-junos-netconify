@@ -335,12 +335,12 @@ class netconifyCmdo(object):
     # in the future to deal with.
 
     if facts['model'] not in ['QFX3500']:
-      self._notify("Not on a QFX device [{}]".format(facts['model']))
+      self._notify('qfx',"Not on a QFX device [{}]".format(facts['model']))
       return False
 
-    mode = self._qfx_device_mode_get()
-    change = ('NO','YES')[mode != self._args.qfx_mode]
-    self._notify("QFX current mode: {}: {}".format(mode, change))
+    now,later = self._qfx_device_mode_get()
+    change = ('NO','YES')[later != self._args.qfx_mode]
+    self._notify('qfx',"QFX mode now/later: {}".format(now, later))
 
     self._tty_logout()
     return True
@@ -459,13 +459,18 @@ class netconifyCmdo(object):
   ### -------------------------------------------------------------------------
   ##### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+  _QFX_MODES = {
+    'Standalone': QFX_MODE_SWITCH,
+    'Node-device': QFX_MODE_NODE
+  }
+
   def _qfx_device_mode_get(self):
     """ get the current device mode """
     rpc = self._tty.nc.rpc
     got = rpc('show-chassis-device-mode')
-    import pdb
-    pdb.set_trace()
-    return QFX_MODE_NODE
+    now = got.findtext('device-mode-current')
+    later = got.findtext('device-mode-after-reboot')
+    return (self._QFX_MODES[now], self._QFX_MODES[later])
 
   def _qfx_device_mode_set(self, xml_mode_name):
     """ sets the device mode """
