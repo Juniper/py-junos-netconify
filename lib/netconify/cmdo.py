@@ -12,6 +12,7 @@ import netconify
 
 __all__ = ['netconifyCmdo']
 
+QFX_MODEL_LIST = ['QFX3500','QFX3500S']
 QFX_MODE_NODE = 'NODE'
 QFX_MODE_SWITCH = 'SWITCH'
 
@@ -340,7 +341,7 @@ class netconifyCmdo(object):
     # set this up as a list check in case we have other models
     # in the future to deal with.
 
-    if facts['model'] not in ['QFX3500']:
+    if facts['model'] not in QFX_MODEL_LIST:
       self._notify('qfx',"Not on a QFX device [{}]".format(facts['model']))
       return False
 
