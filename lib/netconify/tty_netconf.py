@@ -28,7 +28,7 @@ class tty_netconf(object):
     self.facts = Facts(self)
 
   ### -------------------------------------------------------------------------
-  ### NECONF session open and close
+  ### NETCONF session open and close
   ### -------------------------------------------------------------------------
 
   def open(self, at_shell):
@@ -93,6 +93,16 @@ class tty_netconf(object):
     """ rollback that recent changes """
     cmd = E('load-configuration', dict(compare='rollback', rollback="0"))
     return self.rpc(etree.tostring(cmd))
+
+  ### -------------------------------------------------------------------------
+  ### MISC device commands
+  ### -------------------------------------------------------------------------
+
+  def reboot(self, in_min=0):
+    """ issue a reboot to the device """
+    cmd = E('request-reboot', E('in', str(in_min)))
+    rsp = self.rpc(etree.tostring(cmd))
+    return True
 
   ### -------------------------------------------------------------------------
   ### XML RPC command execution

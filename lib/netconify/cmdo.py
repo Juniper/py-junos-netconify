@@ -179,6 +179,8 @@ class netconifyCmdo(object):
 
       if self._args.only_gather_facts is True:
         rc = self._only_gather_facts()
+      elif self._args.qfx_mode is not None:
+        rc = self._qfx_mode()
       elif self._args.dry_run_mode is True:
         rc = self._dry_run()
       else:
@@ -291,13 +293,6 @@ class netconifyCmdo(object):
   ##### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   def _dry_run(self):
-
-    if self._args.qfx_mode is not None:
-      # then we are simply changing the QFX mode to either
-      # "NODE" or "SWITCH" mode.  
-      self._dry_run_qfxmode()
-      return True
-
     # see if our config path can be determined from the args, rather
     # than going to the device for model information.
 
@@ -321,11 +316,17 @@ class netconifyCmdo(object):
     self._conf_build(path)    
     return True
 
-  def _dry_run_qfxmode(self):
-    """
-    Simply check the current status of the QFX node and print
-    the results
-    """
+  ##### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ### -------------------------------------------------------------------------
+  ### QFX MODE processing
+  ### -------------------------------------------------------------------------
+  ##### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  
+
+  def _qfx_mode(self):
+    need_change = False
+
+    # login to the device and verify that this is a supported QFX node
+
     self._tty_login()
     self._tty.nc.facts.gather()
     facts = self._tty.nc.facts.items
@@ -350,8 +351,24 @@ class netconifyCmdo(object):
       self._notify('qfx','No change required')
     else:
       self._notify('qfx','Change required')
+      need_change = True
 
-    self._tty_logout()
+    if self._args.dry_run_mode is True:
+      # then we are all done.
+      self._tty_logout()
+      return True
+
+    if change is True:
+      self._notify('qfx','Changing the mode to: {}'.format(self._args.qfx_mode))
+      self._qfx_device_mode_set()
+    if reboot is True:
+      self._notify('qfx','REBOOTING device now!')
+#      self._tty.nc.reboot()
+      self._tty_logout  ### HACK
+      # no need to close the tty, since the device is rebooting ...
+      return True
+
+    self._tty_logout
     return True
 
   ### -------------------------------------------------------------------------
@@ -473,6 +490,11 @@ class netconifyCmdo(object):
     'Node-device': QFX_MODE_NODE
   }
 
+  _QFX_XML_MODES = {
+    QFX_MODE_SWITCH:'standalone', 
+    QFX_MODE_NODE:'node-device'
+  }
+
   def _qfx_device_mode_get(self):
     """ get the current device mode """
     rpc = self._tty.nc.rpc
@@ -481,6 +503,10 @@ class netconifyCmdo(object):
     later = got.findtext('device-mode-after-reboot')
     return (self._QFX_MODES[now], self._QFX_MODES[later])
 
-  def _qfx_device_mode_set(self, xml_mode_name):
+  def _qfx_device_mode_set(self):
     """ sets the device mode """
-    pass
+    rpc = self._tty.nc.rpc
+    mode = self._QFX_XML_MODES[self._args.qfx_mode]
+    cmd = '<request-chassis-device-mode><{}/></request-chassis-device-mode>'.format(mode)
+    got = rpc(cmd)
+    return True
