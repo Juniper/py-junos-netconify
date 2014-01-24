@@ -328,7 +328,7 @@ class netconifyCmdo(object):
     # login to the device and verify that this is a supported QFX node
 
     self._tty_login()
-    self._tty.nc.facts.gather()
+    self._tty.nc.facts.version()          # only version, gets model, too
     facts = self._tty.nc.facts.items
 
     # make sure we're logged into a QFX3500 device.
