@@ -70,24 +70,35 @@ class netconifyCmdo(object):
     ## auto-detecting based on read parameters
     ## ------------------------------------------------------------------------
 
-    p.add_argument('-m','--model', dest='EXPLICIT_model',
+    g = p.add_argument_group('DEVICE controls')
+
+    g.add_argument('-m','--model', dest='EXPLICIT_model',
       help="EXPLICIT: Junos device model, identifies file in <prefix>/skel")
 
-    p.add_argument('-j', '--conf', dest='EXPLICIT_conf',
+    g.add_argument('-j', '--conf', dest='EXPLICIT_conf',
       help="EXPLICIT: Junos NOOB configuration file")
+
+    g.add_argument('--qfx-node', dest='qfx_mode', 
+      action='store_const', const='NODE',
+      help='Set QFX device into "node" mode')
+
+    g.add_argument('--qfx-switch', dest='qfx_mode', 
+      action='store_const', const='SWITCH',
+      help='Set QFX device into "switch" mode')
 
     ## ------------------------------------------------------------------------
     ## controlling options
     ## ------------------------------------------------------------------------
 
-    p.add_argument('--dry-run', action='store_true', default=False,
+    g = p.add_argument_group('MODE controls')
+    g.add_argument('--dry-run', action='store_true', default=False,
       dest='dry_run_mode',
       help='dry-run builds the config only')
 
-    p.add_argument('--no-save', action='store_true', default=False,
+    g.add_argument('--no-save', action='store_true', default=False,
       help='Prevent files from begin saved into --savedir')
 
-    p.add_argument('-F','--facts', action='store_true',
+    g.add_argument('-F','--facts', action='store_true',
       dest='only_gather_facts',
       help='Only gather facts and save them into --savedir')
 
@@ -95,37 +106,41 @@ class netconifyCmdo(object):
     ## directory controls
     ## ------------------------------------------------------------------------
 
-    p.add_argument('-C','--confdir', default=self.PREFIX, 
+    g = p.add_argument_group('DIR controls')
+    g.add_argument('-C','--confdir', default=self.PREFIX, 
       dest='prefix',   # hack for now.
       help='override path to etc directory configuration files')
 
-    p.add_argument('-S','--savedir', nargs='?', default='.', 
+    g.add_argument('-S','--savedir', nargs='?', default='.', 
       help="Files are saved into this directory, CWD by default")
 
     ## ------------------------------------------------------------------------
     ## tty port configuration
     ## ------------------------------------------------------------------------
 
-    p.add_argument('-p','--port', default='/dev/ttyUSB0',
+    g = p.add_argument_group('TTY controls')
+
+    g.add_argument('-p','--port', default='/dev/ttyUSB0',
       help="serial port device")
 
-    p.add_argument('--baud', default='9600',
+    g.add_argument('-b','--baud', default='9600',
       help="serial port baud rate")
 
-    p.add_argument('-t', '--telnet',
+    g.add_argument('-t', '--telnet',
       help='telnet/terminal server, <host>:<port>')
 
     ## ------------------------------------------------------------------------
     ## login configuration
     ## ------------------------------------------------------------------------
 
-    p.add_argument('-u','--user', default='root',
+    g = p.add_argument_group("LOGIN controls")
+    g.add_argument('-u','--user', default='root',
       help='login user name, defaults to "root"')
 
-    p.add_argument('-P','--passwd', default='',
+    g.add_argument('-P','--passwd', default='',
       help='login user password, *empty* for NOOB')
 
-    p.add_argument('-k', action='store_true', default=False,
+    g.add_argument('-k', action='store_true', default=False,
       dest='passwd_prompt', 
       help='prompt for user password')
 
@@ -140,6 +155,7 @@ class netconifyCmdo(object):
       # build up the necessary NOOB variables
 
       self._args = self._argsparser.parse_args()
+
       if self._args.inventory is not None:
         self._ld_inv(path=self._args.inventory)
 
@@ -260,6 +276,13 @@ class netconifyCmdo(object):
   ### -------------------------------------------------------------------------
 
   def _dry_run(self):
+
+    if self._args.qfx_mode is not None:
+      # then we are simply changing the QFX mode to either
+      # "NODE" or "SWITCH" mode.  
+      self._dry_run_qfxmode()
+      return True
+
     # see if our config path can be determined from the args, rather
     # than going to the device for model information.
 
@@ -282,6 +305,21 @@ class netconifyCmdo(object):
     # now build the conf file, and ensure that it will get saved
     self._conf_build(path)    
     return True
+
+  def _dry_run_qfxmode(self):
+    """
+    Simply check the current status of the QFX node and print
+    the results
+    """
+    self._tty_login()
+    self._tty.nc.facts.gather()
+
+    import pprint
+    pprint.pprint( self._tty.nc.facts.items )
+
+    self._tty_logout()
+    return True
+
 
   ### -------------------------------------------------------------------------
   ### configuration file build/save methods
