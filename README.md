@@ -16,10 +16,10 @@ The `netconify` utility automatically performs this configuration by logging int
 # USAGE
 
 ````
-usage: netconify [-h] [-i INVENTORY] [-M EXPLICIT_MODEL] [-C EXPLICIT_CONF]
-                 [--dry-run] [--no-save] [--confdir PREFIX]
-                 [--savedir [SAVEDIR]] [-P PORT] [--baud BAUD] [-T TELNET]
-                 [-u USER] [-p PASSWD] [-k]
+usage: netconify [-h] [-i INVENTORY] [-m EXPLICIT_MODEL] [-j EXPLICIT_CONF]
+                 [--qfx-node] [--qfx-switch] [--dry-run] [--no-save] [-F]
+                 [-C PREFIX] [-S [SAVEDIR]] [-p PORT] [-b BAUD] [-t TELNET]
+                 [-u USER] [-P PASSWD] [-k]
                  [name]
 
 positional arguments:
@@ -29,21 +29,36 @@ optional arguments:
   -h, --help            show this help message and exit
   -i INVENTORY, --inventory INVENTORY
                         inventory file of named NOOB devices and variables
-  -M EXPLICIT_MODEL, --model EXPLICIT_MODEL
+
+DEVICE controls:
+  -m EXPLICIT_MODEL, --model EXPLICIT_MODEL
                         EXPLICIT: Junos device model, identifies file in
                         <prefix>/skel
-  -C EXPLICIT_CONF, --conf EXPLICIT_CONF
+  -j EXPLICIT_CONF, --conf EXPLICIT_CONF
                         EXPLICIT: Junos NOOB configuration file
+  --qfx-node            Set QFX device into "node" mode
+  --qfx-switch          Set QFX device into "switch" mode
+
+MODE controls:
   --dry-run             dry-run builds the config only
   --no-save             Prevent files from begin saved into --savedir
-  --confdir PREFIX      override path to etc directory configuration files
-  --savedir [SAVEDIR]   Files are saved into this directory, CWD by default
-  -P PORT, --port PORT  serial port device
-  --baud BAUD           serial port baud rate
-  -T TELNET, --telnet TELNET
+  -F, --facts           Only gather facts and save them into --savedir
+
+DIR controls:
+  -C PREFIX, --confdir PREFIX
+                        override path to etc directory configuration files
+  -S [SAVEDIR], --savedir [SAVEDIR]
+                        Files are saved into this directory, CWD by default
+
+TTY controls:
+  -p PORT, --port PORT  serial port device
+  -b BAUD, --baud BAUD  serial port baud rate
+  -t TELNET, --telnet TELNET
                         telnet/terminal server, <host>:<port>
+
+LOGIN controls:
   -u USER, --user USER  login user name, defaults to "root"
-  -p PASSWD, --passwd PASSWD
+  -P PASSWD, --passwd PASSWD
                         login user password, *empty* for NOOB
   -k                    prompt for user password
 ````
