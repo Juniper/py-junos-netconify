@@ -459,14 +459,14 @@ class netconifyCmdo(object):
   ### -------------------------------------------------------------------------
   ##### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    def _qfx_device_mode_get(self):
-      """ get the current device mode """
-      rpc = self._tty.nc.rpc
-      got = rpc('show-chassis-device-mode')
-      import pdb
-      pdb.set_trace()
-      return QFX_MODE_NODE
+  def _qfx_device_mode_get(self):
+    """ get the current device mode """
+    rpc = self._tty.nc.rpc
+    got = rpc('show-chassis-device-mode')
+    import pdb
+    pdb.set_trace()
+    return QFX_MODE_NODE
 
-    def _qfx_device_mode_set(self, xml_mode_name):
-      """ sets the device mode """
-      pass
+  def _qfx_device_mode_set(self, xml_mode_name):
+    """ sets the device mode """
+    pass
