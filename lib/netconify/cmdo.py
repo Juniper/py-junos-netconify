@@ -1,6 +1,6 @@
 """
-This file defines the 'netconifyCmdo' class used by the 'netconify' 
-shell utility
+This file defines the 'netconifyCmdo' class.
+Used by the 'netconify' shell utility.
 """
 import os, sys, json
 import argparse, jinja2
@@ -10,10 +10,15 @@ from lxml import etree
 
 import netconify
 
+__all__ = ['netconifyCmdo']
+
+QFX_MODE_NODE = 'NODE'
+QFX_MODE_SWITCH = 'SWITCH'
+
 class netconifyCmdo(object):
-  PREFIX = '/etc/netconify'
+  PREFIX = '/etc/netconify'              # directory of config files
   INVENTORY = 'hosts'                    # in PREFIX
-  DEFAULT_NAME = 'noob'
+  DEFAULT_NAME = 'noob'                  # when a <name> is not provided
 
   ### -------------------------------------------------------------------------
   ### CONSTRUCTOR
@@ -79,11 +84,11 @@ class netconifyCmdo(object):
       help="EXPLICIT: Junos NOOB configuration file")
 
     g.add_argument('--qfx-node', dest='qfx_mode', 
-      action='store_const', const='NODE',
+      action='store_const', const=QFX_MODE_NODE,
       help='Set QFX device into "node" mode')
 
     g.add_argument('--qfx-switch', dest='qfx_mode', 
-      action='store_const', const='SWITCH',
+      action='store_const', const=QFX_MODE_SWITCH,
       help='Set QFX device into "switch" mode')
 
     ## ------------------------------------------------------------------------
@@ -189,7 +194,7 @@ class netconifyCmdo(object):
     sys.exit(1)
 
   ### -------------------------------------------------------------------------
-  ### tty routines
+  ### Notifiers
   ### -------------------------------------------------------------------------
 
   def _tty_notifier(tty, event, message):
@@ -197,6 +202,10 @@ class netconifyCmdo(object):
 
   def _notify(self, event, message):
     print "CMD:{}:{}".format(event,message)
+
+  ### -------------------------------------------------------------------------
+  ### tty routines
+  ### -------------------------------------------------------------------------
 
   def _tty_login(self):
 
@@ -219,9 +228,11 @@ class netconifyCmdo(object):
   def _tty_logout(self):
     self._tty.logout()    
 
+  ##### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ### -------------------------------------------------------------------------
   ### only gather facts
   ### -------------------------------------------------------------------------
+  ##### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  
 
   def _only_gather_facts(self):
     self._tty_login()
@@ -231,9 +242,11 @@ class netconifyCmdo(object):
     self._tty_logout()
     return True    
 
+  ##### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ### -------------------------------------------------------------------------
   ### NETCONIFY the device!
   ### -------------------------------------------------------------------------
+  ##### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   def _netconify(self):
     self._tty_login()
@@ -271,9 +284,11 @@ class netconifyCmdo(object):
     self._notify('conf','commit completed.')
     return True
 
+  ##### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ### -------------------------------------------------------------------------
   ### dry-run mode is used to create the configuraiton file only
   ### -------------------------------------------------------------------------
+  ##### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   def _dry_run(self):
 
@@ -313,13 +328,22 @@ class netconifyCmdo(object):
     """
     self._tty_login()
     self._tty.nc.facts.gather()
+    facts = self._tty.nc.facts.items
 
-    import pprint
-    pprint.pprint( self._tty.nc.facts.items )
+    # make sure we're logged into a QFX3500 device.
+    # set this up as a list check in case we have other models
+    # in the future to deal with.
+
+    if facts['model'] not in ['QFX3500']:
+      self._notify("Not on a QFX device [{}]".format(facts['model']))
+      return False
+
+    mode = self._qfx_device_mode_get()
+    change = ('NO','YES')[mode != self._args.qfx_mode]
+    self._notify("QFX current mode: {}: {}".format(mode, change))
 
     self._tty_logout()
     return True
-
 
   ### -------------------------------------------------------------------------
   ### configuration file build/save methods
@@ -428,3 +452,21 @@ class netconifyCmdo(object):
       # munge the namevars before they are applied 
       # into the configuraiton template
       self._hook_on_namevars(self._namevars)
+
+  ##### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ### -------------------------------------------------------------------------
+  ### MISC device RPC commands & controls
+  ### -------------------------------------------------------------------------
+  ##### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    def _qfx_device_mode_get(self):
+      """ get the current device mode """
+      rpc = self._tty.nc.rpc
+      got = rpc('show-chassis-device-mode')
+      import pdb
+      pdb.set_trace()
+      return QFX_MODE_NODE
+
+    def _qfx_device_mode_set(self, xml_mode_name):
+      """ sets the device mode """
+      pass
