@@ -362,8 +362,7 @@ class netconifyCmdo(object):
       self._qfx_device_mode_set()
     if reboot is True:
       self._notify('qfx','REBOOTING device now!')
-#      self._tty.nc.reboot()
-      self._tty_logout  ### HACK
+      self._tty.nc.reboot()
       # no need to close the tty, since the device is rebooting ...
       return True
 
