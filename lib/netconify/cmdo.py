@@ -341,9 +341,8 @@ class netconifyCmdo(object):
 
     now,later = self._qfx_device_mode_get()
 
-    no_yes = ('NO','YES')
-    change = no_yes[later != self._args.qfx_mode]     # compare to after-reoobt
-    reboot = no_yes[now != self._args.qfx_mode]       # compare to now
+    change = bool(later != self._args.qfx_mode)     # compare to after-reoobt
+    reboot = bool(now != self._args.qfx_mode)       # compare to now
 
     self._notify('qfx',"QFX mode now/later: {}/{}".format(now, later))
     if now == later and later == self._args.qfx_mode:
