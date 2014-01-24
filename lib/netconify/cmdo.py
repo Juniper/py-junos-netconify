@@ -339,8 +339,17 @@ class netconifyCmdo(object):
       return False
 
     now,later = self._qfx_device_mode_get()
-    change = ('NO','YES')[later != self._args.qfx_mode]
-    self._notify('qfx',"QFX mode now/later: {}".format(now, later))
+
+    no_yes = ('NO','YES')
+    change = no_yes[later != self._args.qfx_mode]     # compare to after-reoobt
+    reboot = no_yes[now != self._args.qfx_mode]       # compare to now
+
+    self._notify('qfx',"QFX mode now/later: {}/{}".format(now, later))
+    if now == later and later == self._args.qfx_mode:
+      # nothing to do
+      self._notify('qfx','No change required')
+    else:
+      self._notify('qfx','Change required')
 
     self._tty_logout()
     return True
