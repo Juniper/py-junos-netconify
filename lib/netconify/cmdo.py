@@ -297,6 +297,7 @@ class netconifyCmdo(object):
       return False
 
     self._notify('conf','commit completed.')
+    self._has_changed = True
     return True
 
   ##### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

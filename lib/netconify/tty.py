@@ -196,7 +196,7 @@ class Terminal(object):
         # so issue a notify, hit <ENTER> and try again just to be sure...
         self.notify('login_warn','waiting on TTY.')
         sleep(5)
-        return
+#        return
 
       self.at_shell = False
       self.state = self._ST_DONE
