@@ -420,19 +420,18 @@ class netconifyCmdo(object):
     template build the configuration and save a copy (unless --no-save)
     """
 
-    if self._args.EXPLICIT_conf is None:
-      model = self._tty.nc.facts.items['model']
-      path = os.path.join(self._args.prefix, 'skel', model+'.conf')
-      self._notify('conf','building from: {}'.format(path))
-      if not os.path.isfile(path):
-        raise RuntimeError('no_file:{}'.format(path))
-      conf = open(path,'r').read()    
-      self.conf = jinja2.Template(conf).render(self._namevars)
-    else:
-      path = self._args.EXPLICIT_conf
-      if not os.path.isfile(path):
-          raise RuntimeError('no_file:{}'.format(path))      
-      self.conf = open(path).read()
+    try:
+      if self._args.EXPLICIT_conf is None:
+        path = os.path.join(self._args.prefix, 'skel', model+'.conf')
+        self._notify('conf','building from: {}'.format(path))
+        conf = open(path,'r').read()    
+        self.conf = jinja2.Template(conf).render(self._namevars)
+      else:
+        path = self._args.EXPLICIT_conf
+        self._notify('conf','reading from: {}'.format(path))
+        self.conf = open(path,'r').read()
+    except:
+      raise RuntimeError('no_file:{}'.format(path))
 
     if self._args.no_save is False:
       self._conf_save()

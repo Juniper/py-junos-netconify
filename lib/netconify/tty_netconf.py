@@ -145,4 +145,8 @@ class tty_netconf(object):
     rxbuf[1] = _xmlns_strip(rxbuf[1])         # nuke the xmlns
     rxbuf = map(_junosns_strip, rxbuf)        # nuke junos: namespace
 
-    return etree.XML(''.join(rxbuf))
+    try:
+      as_xml = etree.XML(''.join(rxbuf))
+      return as_xml
+    except:
+      return etree.XML('<error-in-receive/>')
