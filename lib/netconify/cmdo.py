@@ -2,7 +2,7 @@
 This file defines the 'netconifyCmdo' class.
 Used by the 'netconify' shell utility.
 """
-import os, sys, json
+import os, sys, json, re
 import argparse, jinja2
 from ConfigParser import SafeConfigParser
 from getpass import getpass
@@ -232,7 +232,7 @@ class netconifyCmdo(object):
     tty_args['timeout'] =float(self._args.timeout)
 
     if self._args.telnet is not None:
-      host,port = self._args.telnet.split(':')
+      host,port = re.split('[,:]',self._args.telnet)
       tty_args['host'] = host
       tty_args['port'] = port
       self._tty = netconify.Telnet(**tty_args)
@@ -272,15 +272,11 @@ class netconifyCmdo(object):
     self._notify('facts','retrieving device facts...')    
     self._tty.nc.facts.gather()
 
-    model = self._tty.nc.facts.items['model']
-    path = os.path.join(self._args.prefix, 'skel', model+'.conf')
-
-    self._notify('conf','building from: {}'.format(path))
-    self._conf_build(path)
+    self._conf_build()
     self._facts_save()
-
     rc = self._push_config()    
     self._tty_logout()
+
     return rc
 
   def _push_config(self):
@@ -419,15 +415,24 @@ class netconifyCmdo(object):
 
     return path
 
-  def _conf_build(self, path):
+  def _conf_build(self):
     """
     template build the configuration and save a copy (unless --no-save)
     """
-    if not os.path.isfile(path):
-      raise RuntimeError('no_file:{}'.format(path))
 
-    conf = open(path,'r').read()    
-    self.conf = jinja2.Template(conf).render(self._namevars)
+    if self._args.EXPLICIT_conf is None:
+      model = self._tty.nc.facts.items['model']
+      path = os.path.join(self._args.prefix, 'skel', model+'.conf')
+      self._notify('conf','building from: {}'.format(path))
+      if not os.path.isfile(path):
+        raise RuntimeError('no_file:{}'.format(path))
+      conf = open(path,'r').read()    
+      self.conf = jinja2.Template(conf).render(self._namevars)
+    else:
+      path = self._args.EXPLICIT_conf
+      if not os.path.isfile(path):
+          raise RuntimeError('no_file:{}'.format(path))      
+      self.conf = open(path).read()
 
     if self._args.no_save is False:
       self._conf_save()
