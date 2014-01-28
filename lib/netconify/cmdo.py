@@ -37,9 +37,11 @@ class netconifyCmdo(object):
     self._name = None                   # str
     self._namevars = {}                 # vars for the named NOOB
     self._tty = None                    # jnpr.netconfigy.Serial
+    self._has_changed = False
 
     # hook functions
     self.on_namevars = kvargs.get('on_namevars')
+    self.on_notify = kvargs.get('notify')
 
   ### -------------------------------------------------------------------------
   ### PROPERTIES
@@ -52,6 +54,10 @@ class netconifyCmdo(object):
   @on_namevars.setter
   def on_namevars(self, value):
     self._hook_on_namevars = value
+
+  @property
+  def changed(self):
+    return self._has_changed
   
   ### -------------------------------------------------------------------------
   ### Command Line Arguments Parser 
@@ -135,6 +141,9 @@ class netconifyCmdo(object):
     g.add_argument('-t', '--telnet',
       help='telnet/terminal server, <host>:<port>')
 
+    g.add_argument('--timeout', default='0.5',
+      help='TTY connection timeout (s)')
+
     ## ------------------------------------------------------------------------
     ## login configuration
     ## ------------------------------------------------------------------------
@@ -154,24 +163,26 @@ class netconifyCmdo(object):
   ### run command line tool
   ### -------------------------------------------------------------------------
 
-  def run(self):
+  def run(self, args=None):
     rc = True
     try:
       
       # build up the necessary NOOB variables
-
-      self._args = self._argsparser.parse_args()
+      self._args = self._argsparser.parse_args(args)
+      self._name = self._args.name
 
       if self._args.inventory is not None:
         self._ld_inv(path=self._args.inventory)
 
       if self._args.name is not None:
+        # if we are given a name, lets first try to load the inventory
         if self._inv is None:
-          self._ld_inv(path=os.path.join(self._args.prefix, self.INVENTORY))
-        self._set_namevars()
+          path = os.path.join(self._args.prefix, self.INVENTORY)
+          if os.path.isfile(path):
+            self._ld_inv(path)
+            self._set_namevars()
 
       # handle password input if necessary
-
       if self._args.passwd_prompt is True:
         self._args.passwd = getpass()
 
@@ -204,7 +215,10 @@ class netconifyCmdo(object):
     print "TTY:{}:{}".format(event,message)
 
   def _notify(self, event, message):
-    print "CMD:{}:{}".format(event,message)
+    if self.on_notify is not None:
+      self.on_notify(event,message)
+    elif self.on_notify is not False:
+      print "CMD:{}:{}".format(event,message)
 
   ### -------------------------------------------------------------------------
   ### tty routines
@@ -215,6 +229,7 @@ class netconifyCmdo(object):
     tty_args = {}
     tty_args['user'] = self._args.user 
     tty_args['passwd'] = self._args.passwd 
+    tty_args['timeout'] =float(self._args.timeout)
 
     if self._args.telnet is not None:
       host,port = self._args.telnet.split(':')
@@ -226,7 +241,8 @@ class netconifyCmdo(object):
       tty_args['baud'] = self._args.baud
       self._tty = netconify.Serial(**tty_args)
 
-    self._tty.login( notify=self._tty_notifier )
+    notify = self.on_notify or self._tty_notifier
+    self._tty.login( notify=notify )
 
   def _tty_logout(self):
     self._tty.logout()    
@@ -334,7 +350,7 @@ class netconifyCmdo(object):
       self._notify('login','Failure to login, check TTY, could be in use already.')
       return False
 
-    self._tty.nc.facts.version()          # only version, gets model, too
+    self._tty.nc.facts.gather()
     facts = self._tty.nc.facts.items
 
     # make sure we're logged into a QFX3500 device.
@@ -350,13 +366,16 @@ class netconifyCmdo(object):
     change = bool(later != self._args.qfx_mode)     # compare to after-reoobt
     reboot = bool(now != self._args.qfx_mode)       # compare to now
 
-    self._notify('qfx',"QFX mode now/later: {}/{}".format(now, later))
+    self._notify('info',"QFX mode now/later: {}/{}".format(now, later))
     if now == later and later == self._args.qfx_mode:
       # nothing to do
-      self._notify('qfx','No change required')
+      self._notify('info','No change required')
     else:
-      self._notify('qfx','Action required')
+      self._notify('info','Action required')
       need_change = True
+
+    # keep a copy of the facts
+    self._facts_save()
 
     if self._args.dry_run_mode is True:
       # then we are all done.
@@ -364,10 +383,12 @@ class netconifyCmdo(object):
       return True
 
     if change is True:
-      self._notify('qfx','Changing the mode to: {}'.format(self._args.qfx_mode))
+      self._notify('change','Changing the mode to: {}'.format(self._args.qfx_mode))
+      self._has_changed = True
       self._qfx_device_mode_set()
     if reboot is True:
-      self._notify('qfx','REBOOTING device now!')
+      self._notify('change','REBOOTING device now!')
+      self._has_changed = True      
       self._tty.nc.reboot()
       # no need to close the tty, since the device is rebooting ...
       return True
@@ -420,6 +441,7 @@ class netconifyCmdo(object):
     with open(path,'w+') as f: f.write(self.conf)
 
   def _facts_save(self):
+
     # save basic facts as JSON file
     fname = (self._name or self.DEFAULT_NAME)+'-facts.json'
     path = os.path.join(self._args.savedir, fname)
@@ -427,12 +449,13 @@ class netconifyCmdo(object):
     as_json = json.dumps(self._tty.nc.facts.items)
     with open(path,'w+') as f: f.write(as_json)
 
-    # also save the inventory as XML file
-    fname = (self._name or self.DEFAULT_NAME)+'-inventory.xml'
-    path = os.path.join(self._args.savedir, fname)
-    self._notify('inventory','saving: {}'.format(path))
-    as_xml = etree.tostring(self._tty.nc.facts.inventory, pretty_print=True)
-    with open(path,'w+') as f: f.write(as_xml)
+    if hasattr(self._tty.nc.facts,'inventory'):
+      # also save the inventory as XML file
+      fname = (self._name or self.DEFAULT_NAME)+'-inventory.xml'
+      path = os.path.join(self._args.savedir, fname)
+      self._notify('inventory','saving: {}'.format(path))
+      as_xml = etree.tostring(self._tty.nc.facts.inventory, pretty_print=True)
+      with open(path,'w+') as f: f.write(as_xml)
 
   ### -------------------------------------------------------------------------
   ### load the inventory file

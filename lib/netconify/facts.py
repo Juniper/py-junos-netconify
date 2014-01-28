@@ -24,16 +24,25 @@ class Facts(object):
       pass
 
   def chassis(self):
-    rsp = self.rpc('get-chassis-inventory')
-    self.inventory = rsp    # keep this since we want to save the data to file
-    chas = rsp.find('chassis')
-    sn = chas.findtext('serial-number')
-    self.facts['model'] = chas.findtext('description').upper()
+    try:
+      # try to get the chassis inventory. this will fail if the device
+      # happens to be a QFX in 'node' mode, so use exception handling
+      rsp = self.rpc('get-chassis-inventory')
+      self.inventory = rsp    # keep this since we want to save the data to file
+      chas = rsp.find('chassis')
+      sn = chas.findtext('serial-number')
+      self.facts['model'] = chas.findtext('description').upper()
 
-    # use the chassis level serial number, and if that doesn't exist
-    # look for the 'Backplane' serial number
-    self.facts['serialnumber'] = sn if sn is not None else \
-      chas.xpath('chassis-module[name="Backplane"]/serial-number')[0].text
+      # use the chassis level serial number, and if that doesn't exist
+      # look for the 'Backplane' serial number
+      self.facts['serialnumber'] = sn if sn is not None else \
+        chas.xpath('chassis-module[name="Backplane"]/serial-number')[0].text
+    except:
+      # basically this catches the case if the device is a QFX in node mode;
+      # the chassis-subsystem isn't running.  the hostname is the serial nubmer
+      self.facts['serialnumber'] = self.facts['hostname']
+      pass
+
 
   def eth(self,ifname):
     cmd = E('get-interface-information',
