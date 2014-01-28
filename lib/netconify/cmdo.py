@@ -379,6 +379,8 @@ class netconifyCmdo(object):
 
     if self._args.dry_run_mode is True:
       # then we are all done.
+      self._notify('info','dry-run mode: change-needed: {}'.format(need_change))      
+      self._has_changed = need_change
       self._tty_logout()
       return True
 
