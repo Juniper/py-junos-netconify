@@ -12,7 +12,7 @@ import netconify
 
 __all__ = ['netconifyCmdo']
 
-QFX_MODEL_LIST = ['QFX3500','QFX3500S']
+QFX_MODEL_LIST = ['QFX3500','QFX3500S', 'VIRTUAL CHASSIS']
 QFX_MODE_NODE = 'NODE'
 QFX_MODE_SWITCH = 'SWITCH'
 
@@ -38,6 +38,9 @@ class netconifyCmdo(object):
     self._namevars = {}                 # vars for the named NOOB
     self._tty = None                    # jnpr.netconfigy.Serial
     self._has_changed = False
+
+    # results
+    self.errstr = None                  # string if return is False
 
     # hook functions
     self.on_namevars = kvargs.get('on_namevars')
@@ -97,6 +100,9 @@ class netconifyCmdo(object):
     g.add_argument('--qfx-switch', dest='qfx_mode', 
       action='store_const', const=QFX_MODE_SWITCH,
       help='Set QFX device into "switch" mode')
+
+    g.add_argument('--zeroize',
+      help='Zeroize the device')
 
     ## ------------------------------------------------------------------------
     ## controlling options
@@ -171,6 +177,11 @@ class netconifyCmdo(object):
       self._args = self._argsparser.parse_args(args)
       self._name = self._args.name
 
+      if self._args.zeroize is not None:
+        if self._args.zeroize == 'zeroize':
+          self._zeroize();
+          return True
+
       if self._args.inventory is not None:
         self._ld_inv(path=self._args.inventory)
 
@@ -206,6 +217,16 @@ class netconifyCmdo(object):
   def _err_hanlder(self, err):
     sys.stderr.write("ERROR: {}\n".format(err.message))
     sys.exit(1)
+
+  ### -------------------------------------------------------------------------
+  ### Zeroize
+  ### -------------------------------------------------------------------------
+
+  def _zeroize(self):
+    self._tty_login()
+    self._notify('zeroize','ZEROIZE device, rebooting')
+    self._tty.nc.zeroize()
+    return True    
 
   ### -------------------------------------------------------------------------
   ### Notifiers
@@ -344,7 +365,8 @@ class netconifyCmdo(object):
     try:
       self._tty_login()
     except:
-      self._notify('login','Failure to login, check TTY, could be in use already.')
+      self.errstr = 'Failure to login, check TTY, could be in use already.'
+      self._notify('login_failure', self.errstr )
       return False
 
     self._tty.nc.facts.gather()
@@ -357,6 +379,14 @@ class netconifyCmdo(object):
     if facts['model'] not in QFX_MODEL_LIST:
       self._notify('qfx',"Not on a QFX device [{}]".format(facts['model']))
       return False
+
+    # we want to revert the facts information from the 'FPC 0'
+    # inventory, rather than the chassis 
+
+    inv = self._tty.nc.facts.inventory    
+    fpc0 = inv.xpath('chassis/chassis-module[name="FPC 0"]')[0]
+    facts['serialnumber'] = fpc0.findtext('serial-number')
+    facts['model'] = fpc0.findtext('model-number')
 
     now,later = self._qfx_device_mode_get()
 
