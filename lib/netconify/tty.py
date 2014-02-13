@@ -183,7 +183,7 @@ class Terminal(object):
         # assume we're in a hung state, i.e. we don't see
         # a login prompt for whatever reason
         self.state = self._ST_TTY_NOLOGIN
-#        self.nc.close(force=True)
+        self.write('<close-session/>')    #@@@ this is a hack
 
     def _ev_shell():
       if self.state == self._ST_INIT:
