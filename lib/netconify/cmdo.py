@@ -213,11 +213,11 @@ class netconifyCmdo(object):
         rc = self._netconify()
 
     except RuntimeError as rterr:
-      self._err_hanlder(rterr)
+      self._err_handler(rterr)
 
     return rc
 
-  def _err_hanlder(self, err):
+  def _err_handler(self, err):
     sys.stderr.write("ERROR: {}\n".format(err.message))
     sys.exit(1)
 

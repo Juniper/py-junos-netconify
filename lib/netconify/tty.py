@@ -27,7 +27,7 @@ class Terminal(object):
   """
   TIMEOUT = 0.2           # serial readline timeout, seconds
   EXPECT_TIMEOUT = 10     # total read timeout, seconds
-  LOGIN_RETRY = 10        # total number of passes thru login state-machine
+  LOGIN_RETRY = 5         # total number of passes thru login state-machine
 
   _ST_INIT = 0
   _ST_LOGIN = 1
