@@ -12,7 +12,7 @@ import netconify
 
 __all__ = ['netconifyCmdo']
 
-QFX_MODEL_LIST = ['QFX3500','QFX3500S', 'QFX3600', 'VIRTUAL CHASSIS']
+QFX_MODEL_LIST = ['QFX3500','QFX3500', 'QFX3600', 'VIRTUAL CHASSIS']
 QFX_MODE_NODE = 'NODE'
 QFX_MODE_SWITCH = 'SWITCH'
 
@@ -368,19 +368,19 @@ class netconifyCmdo(object):
 
     try:
       self._tty_login()
-    except:
-      self.errstr = 'Failure to login, check TTY, could be in use already.'
+    except Exception as err:
+      self.errstr = 'Failure to login: {}'.format(err.message)
       self._notify('login_failure', self.errstr )
       return False
 
     self._tty.nc.facts.gather()
     facts = self._tty.nc.facts.items
 
-    # make sure we're logged into a QFX3500 device.
+    # make sure we're logged into a QFX node device.
     # set this up as a list check in case we have other models
     # in the future to deal with.
 
-    if facts['model'] not in QFX_MODEL_LIST:
+    if not any([facts['model'].startswith(m) for m in QFX_MODEL_LIST]):
       self._notify('qfx',"Not on a QFX device [{}]".format(facts['model']))
       return False
 
