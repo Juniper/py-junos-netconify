@@ -27,13 +27,14 @@ class Terminal(object):
   """
   TIMEOUT = 0.2           # serial readline timeout, seconds
   EXPECT_TIMEOUT = 10     # total read timeout, seconds
+  LOGIN_RETRY = 10        # total number of passes thru login state-machine
 
   _ST_INIT = 0
   _ST_LOGIN = 1
   _ST_PASSWD = 2
   _ST_DONE = 3
   _ST_BAD_PASSWD = 4
-  _ST_NC_HUNG = 5
+  _ST_TTY_NOLOGIN = 5
 
   _re_pat_login = '(?P<login>ogin:\s*$)'
 
@@ -57,10 +58,15 @@ class Terminal(object):
     :kvargs['passwd']:
       defaults to empty; NOOB Junos devics there is
       no root password initially
+
+    :kvargs['attempts']:
+      the total number of login attempts thru the login
+      state-machine
     """    
     # logic args
     self.user = kvargs.get('user','root')
     self.passwd = kvargs.get('passwd','')
+    self.login_attempts = kvargs.get('attempts') or self.LOGIN_RETRY
 
     # misc setup
     self.nc = tty_netconf( self )
@@ -147,7 +153,7 @@ class Terminal(object):
   ##### -----------------------------------------------------------------------
 
   def _login_state_machine(self, attempt=0):
-    if 10 == attempt: 
+    if self.login_attempts == attempt: 
       raise RuntimeError('login_sm_failure')
 
     prompt,found = self.read_prompt()
@@ -172,12 +178,12 @@ class Terminal(object):
       # return through and try again ... could have been
       # prior failed attempt
 
-    def _ev_hungnetconf():
+    def _ev_tty_nologin():
       if self._ST_INIT == self.state:
-        # assume we're in a hung state from XML-MODE. issue the 
-        # NETCONF close command, but set the state to NC_HUNG
-        self.state = self._ST_NC_HUNG
-        self.nc.close(force=True)
+        # assume we're in a hung state, i.e. we don't see
+        # a login prompt for whatever reason
+        self.state = self._ST_TTY_NOLOGIN
+#        self.nc.close(force=True)
 
     def _ev_shell():
       if self.state == self._ST_INIT:
@@ -209,7 +215,7 @@ class Terminal(object):
       'cli': _ev_cli
     }
 
-    _ev_tbl.get(found, _ev_hungnetconf)()
+    _ev_tbl.get(found, _ev_tty_nologin)()
 
     if self.state == self._ST_DONE:
       return True

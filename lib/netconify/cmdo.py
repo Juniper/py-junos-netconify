@@ -165,6 +165,9 @@ class netconifyCmdo(object):
       dest='passwd_prompt', 
       help='prompt for user password')
 
+    g.add_argument('-a','--attempts', default=10,
+      help='login attempts before giving up')
+
   ### -------------------------------------------------------------------------
   ### run command line tool
   ### -------------------------------------------------------------------------
@@ -250,7 +253,8 @@ class netconifyCmdo(object):
     tty_args = {}
     tty_args['user'] = self._args.user 
     tty_args['passwd'] = self._args.passwd 
-    tty_args['timeout'] =float(self._args.timeout)
+    tty_args['timeout'] = float(self._args.timeout)
+    tty_args['attempts'] = int(self._args.attempts)
 
     if self._args.telnet is not None:
       host,port = re.split('[,:]',self._args.telnet)
