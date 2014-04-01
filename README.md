@@ -1,3 +1,7 @@
+### NOTICE: Under active construction
+
+In the process of streamlining the functionality based on recent use-cases, etc.  Please be advised that the README below is out of date at the momement.  The original code has been backed up on branch `0_0_0` should you want a copy.
+
 # ABOUT
 
 Junos console/bootstrap New-Out-Of-Box (NOOB) configuration automation. 
