@@ -147,6 +147,9 @@ class netconifyCmdo(object):
     g.add_argument('-t', '--telnet',
       help='telnet/terminal server, <host>:<port>')
 
+    g.add_argument('-s', '--ssh', action='store_true',
+      help='use ssh/CLI')
+
     g.add_argument('--timeout', default='0.5',
       help='TTY connection timeout (s)')
 
@@ -256,7 +259,10 @@ class netconifyCmdo(object):
     tty_args['timeout'] = float(self._args.timeout)
     tty_args['attempts'] = int(self._args.attempts)
 
-    if self._args.telnet is not None:
+    if self._args.ssh is True:
+      print "USE SSH, unsupported at this time."
+      sys.exit(1)
+    elif self._args.telnet is not None:
       host,port = re.split('[,:]',self._args.telnet)
       tty_args['host'] = host
       tty_args['port'] = port
@@ -454,7 +460,7 @@ class netconifyCmdo(object):
     """
     template build the configuration and save a copy (unless --no-save)
     """
-
+    path = None
     try:
       if self._args.EXPLICIT_conf is None:
         path = os.path.join(self._args.prefix, 'skel', model+'.conf')
