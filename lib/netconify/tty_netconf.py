@@ -104,6 +104,12 @@ class tty_netconf(object):
     rsp = self.rpc(etree.tostring(cmd))
     return True
 
+  def poweroff(self, in_min=0):
+    """ issue a reboot to the device """
+    cmd = E('request-power-off', E('in', str(in_min)))
+    rsp = self.rpc(etree.tostring(cmd))
+    return True
+
   def zeroize(self):
     """ issue a reboot to the device """
     cmd = E.command('request system zeroize')

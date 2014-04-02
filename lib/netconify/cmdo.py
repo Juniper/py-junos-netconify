@@ -297,10 +297,13 @@ class netconifyCmdo(object):
         self.results['changed'] = True
 
     def _shutdown(self):
-        """ @@@: shutdown or reboot """
+        """ shutdown or reboot """
         self._skip_logout = True        
-        self._notify('shutdown','shutdown {}'.format(self._args.request_shutdown))        
-        self._tty.nc.shutdown(reboot=False)
+        mode = self._args.request_shutdown
+        self._notify('shutdown','shutdown {}'.format(mode))    
+        nc = self._tty.nc        
+        shutdown = nc.poweroff if 'poweroff' == mode else nc.reboot
+        shutdown()
         self._skip_logout = True
         self.results['changed'] = True
 

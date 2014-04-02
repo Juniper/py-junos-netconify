@@ -14,10 +14,16 @@ class Facts(object):
   
   def version(self):
     rsp = self.rpc('get-software-information')
+    self.swinfo = rsp # keep this since we may want it later
+
+    # extract the version
     pkginfo = rsp.xpath('.//package-information[name = "junos"]/comment')[0].text  
     self.facts['version'] = re.findall(r'\[(.*)\]', pkginfo)[0]
 
+    # extract the host-name
     self.facts['hostname'] = rsp.xpath('.//host-name')[0].text  
+
+    # extract the product model/models
     product_model = rsp.xpath('//product-model')
     num_models = len(product_model)
     if num_models == 0:
