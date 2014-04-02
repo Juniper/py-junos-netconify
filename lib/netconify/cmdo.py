@@ -9,10 +9,10 @@ from getpass import getpass
 from lxml import etree
 
 import netconify
+import netconify.constants as C
 
 __all__ = ['netconifyCmdo']
 
-VERSION = '0.0.2'
 QFX_MODE_NODE = 'NODE'
 QFX_MODE_SWITCH = 'SWITCH'
 
@@ -62,7 +62,7 @@ class netconifyCmdo(object):
             nargs='?', 
             help='name of Junos device')
 
-        p.add_argument('--version', action='version', version=VERSION )
+        p.add_argument('--version', action='version', version=C.version )
 
         ## ------------------------------------------------------------------------
         ## Explicit controls to select the NOOB conf file, vs. netconify
@@ -176,6 +176,7 @@ class netconifyCmdo(object):
             self._hook_exception('parse_args', err)
 
         args = self._args # alias
+
         # ----------------------------------
         # handle password input if necessary
         # ----------------------------------
