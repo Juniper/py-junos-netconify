@@ -14,14 +14,20 @@ class Facts(object):
   
   def version(self):
     rsp = self.rpc('get-software-information')
-    pkginfo = rsp.xpath('.//package-information[name = "junos"]/comment')[0].text    
-
+    pkginfo = rsp.xpath('.//package-information[name = "junos"]/comment')[0].text  
     self.facts['version'] = re.findall(r'\[(.*)\]', pkginfo)[0]
-    self.facts['hostname'] = rsp.findtext('host-name')
-    try:
-      self.facts['model'] = rsp.findtext('product-model').upper()
-    except:
-      pass
+
+    self.facts['hostname'] = rsp.xpath('.//host-name')[0].text  
+    product_model = rsp.xpath('//product-model')
+    num_models = len(product_model)
+    if num_models == 0:
+      self.facts['model'] = None
+    elif num_models == 1:
+      self.facts['model'] = product_model[0].text
+    else:
+      models = {}
+      fpc = lambda m: m.xpath('../../re-name')[0].text
+      self.facts['models'] = { fpc(m): m.text for m in product_model }
 
   def chassis(self):
     try:

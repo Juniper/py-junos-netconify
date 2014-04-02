@@ -1,5 +1,10 @@
 #!/usr/bin/env python2.7
+import sys
 from netconify.cmdo import *
 
 nc = netconifyCmdo()
-nc.run()
+results = nc.run()
+
+if results['failed'] is True:
+    print results['errmsg']
+    sys.exit(1)
