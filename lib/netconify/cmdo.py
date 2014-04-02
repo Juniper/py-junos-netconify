@@ -11,6 +11,7 @@ from lxml import etree
 import netconify
 import netconify.constants as C
 
+# only export the netconifyCmdo class definition
 __all__ = ['netconifyCmdo']
 
 QFX_MODE_NODE = 'NODE'
@@ -431,11 +432,17 @@ class netconifyCmdo(object):
     ### -------------------------------------------------------------------------
     ##### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+    # the following are the mode status string retrieved from NETCONF command
+    # to determine the current mode
+
     _QFX_MODES = {
         'Standalone': QFX_MODE_SWITCH,
         'Node-device': QFX_MODE_NODE
     }
 
+    # the following are the mode options inserted into the NETCONF command
+    # to change the mode
+    
     _QFX_XML_MODES = {
         QFX_MODE_SWITCH:'standalone', 
         QFX_MODE_NODE:'node-device'
