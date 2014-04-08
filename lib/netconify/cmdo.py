@@ -14,6 +14,7 @@ import netconify.constants as C
 # only export the netconifyCmdo class definition
 __all__ = ['netconifyCmdo']
 
+QFX_MODEL_LIST = ['QFX3500', 'QFX3600', 'VIRTUAL CHASSIS']
 QFX_MODE_NODE = 'NODE'
 QFX_MODE_SWITCH = 'SWITCH'
 
@@ -25,7 +26,8 @@ class netconifyCmdo(object):
 
     def __init__(self, **kvargs):
         """
-        @@@: TBD
+        kvargs['notify']
+          event notify callback
         """
 
         #
@@ -34,7 +36,7 @@ class netconifyCmdo(object):
         self._name = None                   
         self._tty = None                    
         self._skip_logout = False
-        self.on_notify = None
+        self.on_notify = kvargs.get('notify', None)
 
         #
         # do stuff in the constructor
@@ -289,6 +291,8 @@ class netconifyCmdo(object):
         if args.gather_facts is True: self._gather_facts()
         if args.junos_conf_file is not None: self._push_config()
 
+        if args.qfx_mode is not None: self._qfx_mode()
+
     def _zeroize(self):
         """ perform device ZEROIZE actions """
         self._notify('zeroize','ZEROIZE device, rebooting')
@@ -311,6 +315,7 @@ class netconifyCmdo(object):
         self._notify('facts','retrieving device facts...')    
         self._tty.nc.facts.gather()
         self.facts = self._tty.nc.facts.items
+        self.results['facts'] = self.facts
 
         def my_name():
             """ 
