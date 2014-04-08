@@ -29,11 +29,11 @@ class Facts(object):
     if num_models == 0:
       self.facts['model'] = None
     elif num_models == 1:
-      self.facts['model'] = product_model[0].text
+      self.facts['model'] = product_model[0].text.upper()
     else:
       models = {}
       fpc = lambda m: m.xpath('../../re-name')[0].text
-      self.facts['models'] = { fpc(m): m.text for m in product_model }
+      self.facts['models'] = { fpc(m): m.text.upper() for m in product_model }
 
   def chassis(self):
     try:

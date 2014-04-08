@@ -114,7 +114,7 @@ class netconifyCmdo(object):
             help="Files are saved into this directory, $CWD by default")
 
         g.add_argument('--no-save', 
-            action='store_false',
+            action='store_true',
             help="Do not save facts and inventory files")
 
         ## ------------------------------------------------------------------------
@@ -288,9 +288,12 @@ class netconifyCmdo(object):
             self._zeroize()
             return
 
-        if args.gather_facts is True: self._gather_facts()
-        if args.junos_conf_file is not None: self._push_config()
+        if args.gather_facts is True: 
+            self._gather_facts()
+            self._save_facts_json()
+            self._save_inventory_xml()
 
+        if args.junos_conf_file is not None: self._push_config()
         if args.qfx_mode is not None: self._qfx_mode()
 
     def _zeroize(self):
@@ -311,37 +314,29 @@ class netconifyCmdo(object):
         self._skip_logout = True
         self.results['changed'] = True
 
+    def _save_facts_json(self):
+        if self._args.no_save is True: return         
+        fname = self._save_name+'-facts.json'
+        path = os.path.join(self._args.savedir, fname)
+        self._notify('facts','saving: {}'.format(path))
+        with open(path,'w+') as f: f.write(json.dumps(self.facts))
+
+    def _save_inventory_xml(self):
+        if self._args.no_save is True: return                 
+        if not hasattr(self._tty.nc.facts,'inventory'): return
+
+        fname = self._save_name+'-inventory.xml'
+        path = os.path.join(self._args.savedir, fname)
+        self._notify('inventory','saving: {}'.format(path))
+        as_xml = etree.tostring(self._tty.nc.facts.inventory, pretty_print=True)
+        with open(path,'w+') as f: f.write(as_xml)
+
     def _gather_facts(self):
         self._notify('facts','retrieving device facts...')    
         self._tty.nc.facts.gather()
         self.facts = self._tty.nc.facts.items
         self.results['facts'] = self.facts
-
-        def my_name():
-            """ 
-            use the explicit name, the configured host-name, or derive
-            the name from the console port
-            """
-            return self._name or self.facts['hostname'] or '_'.join(self.console)
-
-        def save_facts():
-            name = my_name()
-            #  save basic facts as JSON file
-            fname = name+'-facts.json'
-            path = os.path.join(self._args.savedir, fname)
-            self._notify('facts','saving: {}'.format(path))
-            as_json = json.dumps(self._tty.nc.facts.items)
-            with open(path,'w+') as f: f.write(as_json)
-
-            if hasattr(self._tty.nc.facts,'inventory'):
-                # also save the inventory as XML file
-                fname = name+'-inventory.xml'
-                path = os.path.join(self._args.savedir, fname)
-                self._notify('inventory','saving: {}'.format(path))
-                as_xml = etree.tostring(self._tty.nc.facts.inventory, pretty_print=True)
-                with open(path,'w+') as f: f.write(as_xml)
-
-        if self._args.no_save is not False: save_facts()
+        self._save_name = self._name or self.facts['hostname'] or '_'.join(self.console)
 
     def _push_config(self):
         """ push the configuration or rollback changes on error """
@@ -377,8 +372,7 @@ class netconifyCmdo(object):
     ##### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  
 
     def _qfx_mode(self):
-        need_change = False
-
+        
         # ----------------------------------------------------
         # we need the facts, so if the caller didn't explicity
         # request them, grab them now
@@ -396,23 +390,29 @@ class netconifyCmdo(object):
         if not any([facts['model'].startswith(m) for m in QFX_MODEL_LIST]):
             self.results['errmsg'] = "Not on a QFX device [{}]".format(facts['model'])
             self.results['failed'] = True
+            self._save_facts_json()
+            self._save_inventory_xml()
+            self.results['facts'] = self.facts
             self._notify('qfx', self.results['errmsg'])
             return
 
-        # --------------------------------------------------------
-        # we want to revert the facts information from the 'FPC 0'
-        # inventory, rather than the chassis 
-        # --------------------------------------------------------
-
-        inv = self._tty.nc.facts.inventory    
-        fpc0 = inv.xpath('chassis/chassis-module[name="FPC 0"]')[0]
-        facts['serialnumber'] = fpc0.findtext('serial-number')
-        facts['model'] = fpc0.findtext('model-number')
-
         now,later = self._qfx_device_mode_get()
-
         change = bool(later != self._args.qfx_mode)     # compare to after-reoobt
         reboot = bool(now != self._args.qfx_mode)       # compare to now
+
+        if now == QFX_MODE_SWITCH and change is True:   # flipping to NODE
+            # --------------------------------------------------------
+            # we want to revert the facts information from the 'FPC 0'
+            # inventory, rather than the chassis, and re-save the facts 
+            # --------------------------------------------------------            
+            inv = self._tty.nc.facts.inventory    
+            fpc0 = inv.xpath('chassis/chassis-module[name="FPC 0"]')[0]
+            facts['serialnumber'] = fpc0.findtext('serial-number')
+            facts['model'] = fpc0.findtext('model-number')
+
+        self._save_facts_json()
+        self._save_inventory_xml()
+        self.results['facts'] = self.facts
 
         self._notify('info',"QFX mode now/later: {}/{}".format(now, later))
         if now == later and later == self._args.qfx_mode:
@@ -420,7 +420,6 @@ class netconifyCmdo(object):
             self._notify('info','No change required')
         else:
             self._notify('info','Action required')
-            need_change = True
 
         if change is True:
             self._notify('change','Changing the mode to: {}'.format(self._args.qfx_mode))
