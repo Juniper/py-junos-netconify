@@ -68,8 +68,7 @@ class netconifyCmdo(object):
         p.add_argument('--version', action='version', version=C.version )
 
         ## ------------------------------------------------------------------------
-        ## Explicit controls to select the NOOB conf file, vs. netconify
-        ## auto-detecting based on read parameters
+        ## Device level options
         ## ------------------------------------------------------------------------
 
         g = p.add_argument_group('DEVICE options')
@@ -77,6 +76,11 @@ class netconifyCmdo(object):
         g.add_argument('-f', '--file', 
             dest='junos_conf_file',
             help="Junos configuration file")
+
+        g.add_argument("--merge",
+            dest='junos_merge_conf',
+            help='load-merge conf file, default is overwrite',
+            action='store_true')
 
         g.add_argument('--qfx-node', 
             dest='qfx_mode', 
@@ -343,7 +347,11 @@ class netconifyCmdo(object):
 
         self._notify('conf','loading into device ...')
         content = open(self._args.junos_conf_file,'r').read()
-        rc = self._tty.nc.load(content=content)
+        load_args = dict(content=content)
+        if self._args.junos_merge_conf is True:
+            load_args['action'] = 'replace'  # merge/replace; yeah, I know ...
+        rc = self._tty.nc.load(**load_args)
+
         if rc is not True:
             self.results['failed'] = True
             self.results['errmsg'] = 'failure to load configuration, aborting.'
