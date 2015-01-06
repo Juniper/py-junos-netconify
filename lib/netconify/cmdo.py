@@ -106,6 +106,15 @@ class netconifyCmdo(object):
             action='store_true',
             dest='gather_facts',
             help='Gather facts and save them into SAVEDIR')
+            
+        g.add_argument('--srx_cluster', 
+            dest='request_srx_cluster',
+            help='cluster_id,node ... Invoke cluster on SRX device and reboot')
+
+        g.add_argument('--srx_cluster_disable', 
+            dest='request_srx_cluster_dis',
+            action='store_true',
+            help='Disable cluster mode on SRX device and reboot')
 
         ## ------------------------------------------------------------------------
         ## directories
@@ -284,6 +293,14 @@ class netconifyCmdo(object):
     def _do_actions(self):
         args = self._args # alias
 
+        if args.request_srx_cluster is not None:
+            self._srx_cluster()
+            return
+        
+        if args.request_srx_cluster_dis:
+            self._srx_cluster_disable()
+            return
+
         if args.request_shutdown:
             self._shutdown()
             return
@@ -300,6 +317,26 @@ class netconifyCmdo(object):
         if args.junos_conf_file is not None: self._push_config()
         if args.qfx_mode is not None: self._qfx_mode()
 
+    def _srx_cluster(self):
+        """ Enable cluster mode on SRX device"""
+        srx_args = {}
+        cluster_id,node = re.split('[:,]',self._args.request_srx_cluster)
+        srx_args['cluster_id'] = cluster_id
+        srx_args['node'] = node
+        self._notify('srx_cluster','set device to cluster mode, rebooting')
+        self._notify('srx_cluster','Cluster ID: {}'.format(cluster_id))
+        self._notify('srx_cluster','Node: {}'.format(node))
+        self._tty.nc.enablecluster(cluster_id,node)
+        self._skip_logout = True
+        self.results['changed'] = True
+    
+    def _srx_cluster_disable(self):
+        """ Disable cluster mode on SRX device"""
+        self._notify('srx_cluster','disable cluster mode on srx device, rebooting')
+        self._tty.nc.disablecluster()
+        self._skip_logout = True
+        self.results['changed'] = True
+        
     def _zeroize(self):
         """ perform device ZEROIZE actions """
         self._notify('zeroize','ZEROIZE device, rebooting')

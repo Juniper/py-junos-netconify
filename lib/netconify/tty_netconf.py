@@ -119,6 +119,20 @@ class tty_netconf(object):
       pass
     return True
 
+  def disablecluster(self):
+    """ issue set chassis cluster disable to the device nad reboot """
+    cmd = E.command('set chassis cluster disable reboot')
+    rsp = self.rpc(etree.tostring(cmd))
+    # No need to check error exception, device will be rebooted even if not in cluster
+    return True
+
+  def enablecluster(self, cluster_id, node):
+    """ issue request chassis cluster command """
+    cmd = E('set-chassis-cluster-enable', E('cluster-id', str(cluster_id)), E('node', str(node)), E('reboot'))
+    rsp = self.rpc(etree.tostring(cmd))
+    #device will be set to new cluster ID:NODE value
+    return True
+    
   ### -------------------------------------------------------------------------
   ### XML RPC command execution
   ### -------------------------------------------------------------------------
