@@ -42,6 +42,11 @@ DEVICE controls:
                         EXPLICIT: Junos NOOB configuration file
   --qfx-node            Set QFX device into "node" mode
   --qfx-switch          Set QFX device into "switch" mode
+  --srx_cluster REQUEST_SRX_CLUSTER
+                        cluster_id,node ... Invoke cluster on SRX device and
+                        reboot
+  --srx_cluster_disable
+                        Disable cluster mode on SRX device and reboot
 
 MODE controls:
   --dry-run             dry-run builds the config only
