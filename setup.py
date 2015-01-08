@@ -1,21 +1,22 @@
-import os, sys
+import os
+import sys
 from glob import glob
 from setuptools import setup, find_packages
 
-requirements = [ 'pyserial','lxml','jinja2' ]
+requirements = ['pyserial', 'lxml', 'jinja2']
 
 setup(
-    name = "junos-netconify",
-    version = "0.1.1",
-    author = "Jeremy Schulman",
-    author_email = "jnpr-community-netdev@juniper.net",
-    description = ( "Junos console/bootstrap automation"),
-    license = "Apache 2.0",
-    keywords = "Junos NETCONF basic CONSOLE automation",
-    url = "http://www.github.com/Juniper/py-junos-netconify",
+    name="junos-netconify",
+    version="0.1.1",
+    author="Jeremy Schulman",
+    author_email="jnpr-community-netdev@juniper.net",
+    description=("Junos console/bootstrap automation"),
+    license="Apache 2.0",
+    keywords="Junos NETCONF basic CONSOLE automation",
+    url="http://www.github.com/Juniper/py-junos-netconify",
     install_requires=requirements,
     packages=find_packages('lib'),
-    package_dir={'':'lib'},
+    package_dir={'': 'lib'},
     scripts=['tools/netconify'],
     classifiers=[
         'Development Status :: 4 - Beta',
@@ -34,5 +35,5 @@ setup(
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Topic :: System :: Networking',
         'Topic :: Text Processing :: Markup :: XML'
-    ],    
+    ],
 )
