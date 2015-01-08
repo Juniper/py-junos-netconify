@@ -7,7 +7,7 @@ requirements = ['pyserial', 'lxml', 'jinja2']
 
 setup(
     name="junos-netconify",
-    version="0.1.1",
+    version="1.0.0.dev",
     author="Jeremy Schulman",
     author_email="jnpr-community-netdev@juniper.net",
     description=("Junos console/bootstrap automation"),
@@ -19,7 +19,7 @@ setup(
     package_dir={'': 'lib'},
     scripts=['tools/netconify'],
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'Environment :: Console',
         'Intended Audience :: Developers',
         'Intended Audience :: Information Technology',
