@@ -2,8 +2,12 @@
 This file defines the 'netconifyCmdo' class.
 Used by the 'netconify' shell utility.
 """
-import os, sys, json, re
-import argparse, jinja2
+import os
+import sys
+import json
+import re
+import argparse
+import jinja2
 from ConfigParser import SafeConfigParser
 from getpass import getpass
 from lxml import etree
@@ -15,11 +19,12 @@ __all__ = ['netconifyCmdo']
 QFX_MODE_NODE = 'NODE'
 QFX_MODE_SWITCH = 'SWITCH'
 
+
 class netconifyCmdo(object):
 
-    ### -------------------------------------------------------------------------
-    ### CONSTRUCTOR
-    ### -------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
+    # CONSTRUCTOR
+    # -------------------------------------------------------------------------
 
     def __init__(self, **kvargs):
         """
@@ -29,8 +34,8 @@ class netconifyCmdo(object):
         #
         # private properties
         #
-        self._name = None                   
-        self._tty = None                    
+        self._name = None
+        self._tty = None
         self._has_changed = False
 
         #
@@ -43,120 +48,120 @@ class netconifyCmdo(object):
         #
         self.errstr = None                  # string if return is False
 
-    ### -------------------------------------------------------------------------
-    ### PROPERTIES
-    ### -------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
+    # PROPERTIES
+    # -------------------------------------------------------------------------
 
     @property
     def changed(self):
         return self._has_changed
-  
-    ### -------------------------------------------------------------------------
-    ### Command Line Arguments Parser 
-    ### -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
+    # Command Line Arguments Parser
+    # -------------------------------------------------------------------------
 
     def _init_argsparser(self):
         p = argparse.ArgumentParser(add_help=True)
         self._argsparser = p
 
-        ## ------------------------------------------------------------------------
-        ## input identifiers
-        ## ------------------------------------------------------------------------
+        # ---------------------------------------------------------------------
+        # input identifiers
+        # ---------------------------------------------------------------------
 
-        p.add_argument('name', nargs='?', 
-            help='name of Junos device')
+        p.add_argument('name', nargs='?',
+                       help='name of Junos device')
 
-        ## ------------------------------------------------------------------------
-        ## Explicit controls to select the NOOB conf file, vs. netconify
-        ## auto-detecting based on read parameters
-        ## ------------------------------------------------------------------------
+        # ---------------------------------------------------------------------
+        # Explicit controls to select the NOOB conf file, vs. netconify
+        # auto-detecting based on read parameters
+        # ---------------------------------------------------------------------
 
         g = p.add_argument_group('DEVICE options')
 
-        g.add_argument('-f', '--file', 
-            dest='junos_conf_file',
-            help="Junos configuration file")
+        g.add_argument('-f', '--file',
+                       dest='junos_conf_file',
+                       help="Junos configuration file")
 
-        g.add_argument('--qfx-node', 
-            dest='qfx_mode', 
-            action='store_const', const=QFX_MODE_NODE,
-            help='Set QFX device into "node" mode')
+        g.add_argument('--qfx-node',
+                       dest='qfx_mode',
+                       action='store_const', const=QFX_MODE_NODE,
+                       help='Set QFX device into "node" mode')
 
-        g.add_argument('--qfx-switch', 
-            dest='qfx_mode', 
-            action='store_const', const=QFX_MODE_SWITCH,
-            help='Set QFX device into "switch" mode')
+        g.add_argument('--qfx-switch',
+                       dest='qfx_mode',
+                       action='store_const', const=QFX_MODE_SWITCH,
+                       help='Set QFX device into "switch" mode')
 
-        g.add_argument('--zeroize', 
-            dest='request_zeroize',
-            help='ZEROIZE the device')
+        g.add_argument('--zeroize',
+                       dest='request_zeroize',
+                       help='ZEROIZE the device')
 
-        g.add_argument('--reboot', 
-            dest='request_reboot',
-            help='REBOOT the device')
+        g.add_argument('--reboot',
+                       dest='request_reboot',
+                       help='REBOOT the device')
 
-        g.add_argument('--facts', 
-            action='store_true',
-            dest='gather_facts',
-            help='Gather facts and save them into --savedir')
+        g.add_argument('--facts',
+                       action='store_true',
+                       dest='gather_facts',
+                       help='Gather facts and save them into --savedir')
 
-        ## ------------------------------------------------------------------------
-        ## directories
-        ## ------------------------------------------------------------------------
+        # ---------------------------------------------------------------------
+        # directories
+        # ---------------------------------------------------------------------
 
         g = p.add_argument_group('DIRECTORY options')
 
-        g.add_argument('-S','--savedir', 
-            nargs='?', default='.', 
-            help="Files are saved into this directory, CWD by default")
+        g.add_argument('-S', '--savedir',
+                       nargs='?', default='.',
+                       help="Files are saved into this directory, CWD by default")
 
-        ## ------------------------------------------------------------------------
-        ## console port 
-        ## ------------------------------------------------------------------------
+        # ---------------------------------------------------------------------
+        # console port
+        # ---------------------------------------------------------------------
 
         g = p.add_argument_group('CONSOLE options')
 
-        g.add_argument('-p','--port', 
-            default='/dev/ttyUSB0',
-            help="serial port device")
+        g.add_argument('-p', '--port',
+                       default='/dev/ttyUSB0',
+                       help="serial port device")
 
-        g.add_argument('-b','--baud', 
-            default='9600',
-            help="serial port baud rate")
+        g.add_argument('-b', '--baud',
+                       default='9600',
+                       help="serial port baud rate")
 
         g.add_argument('-t', '--telnet',
-            help='terminal server, <host>,<port>')
+                       help='terminal server, <host>,<port>')
 
-        g.add_argument('--timeout', 
-            default='0.5',
-            help='TTY connection timeout (s)')
+        g.add_argument('--timeout',
+                       default='0.5',
+                       help='TTY connection timeout (s)')
 
-        ## ------------------------------------------------------------------------
-        ## login configuration
-        ## ------------------------------------------------------------------------
+        # ---------------------------------------------------------------------
+        # login configuration
+        # ---------------------------------------------------------------------
 
         g = p.add_argument_group("LOGIN options")
 
-        g.add_argument('-u','--user', 
-            default='root',
-            help='login user name, defaults to "root"')
+        g.add_argument('-u', '--user',
+                       default='root',
+                       help='login user name, defaults to "root"')
 
-        g.add_argument('-P','--passwd', 
-            default='',
-            help='login user password, *empty* for NOOB')
+        g.add_argument('-P', '--passwd',
+                       default='',
+                       help='login user password, *empty* for NOOB')
 
-        g.add_argument('-k', 
-            action='store_true', default=False,
-            dest='passwd_prompt', 
-            help='prompt for user password')
+        g.add_argument('-k',
+                       action='store_true', default=False,
+                       dest='passwd_prompt',
+                       help='prompt for user password')
 
-        g.add_argument('-a','--attempts', 
-            default=10,
-            help='login attempts before giving up')
+        g.add_argument('-a', '--attempts',
+                       default=10,
+                       help='login attempts before giving up')
 
-    ### -------------------------------------------------------------------------
-    ### run command, can be involved from SHELL or programmatically
-    ### -------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
+    # run command, can be involved from SHELL or programmatically
+    # -------------------------------------------------------------------------
 
     def run(self, args=None):
         rc = True
@@ -169,12 +174,11 @@ class netconifyCmdo(object):
             # handle password input if necessary
             if self._args.passwd_prompt is True:
                 self._args.passwd = getpass()
-      
+
             if self._args.zeroize is not None:
                 if self._args.zeroize == 'zeroize':
                     self._zeroize();
                 return True
-
 
         except RuntimeError as rterr:
             self._err_handler(rterr)
@@ -185,9 +189,9 @@ class netconifyCmdo(object):
         sys.stderr.write("ERROR: {}\n".format(err.message))
         sys.exit(1)
 
-  ### -------------------------------------------------------------------------
-  ### Zeroize
-  ### -------------------------------------------------------------------------
+  # -------------------------------------------------------------------------
+  # Zeroize
+  # -------------------------------------------------------------------------
 
   def _zeroize(self):
     self._tty_login()
@@ -195,9 +199,9 @@ class netconifyCmdo(object):
     self._tty.nc.zeroize()
     return True    
 
-  ### -------------------------------------------------------------------------
-  ### Notifiers
-  ### -------------------------------------------------------------------------
+  # -------------------------------------------------------------------------
+  # Notifiers
+  # -------------------------------------------------------------------------
 
   def _tty_notifier(tty, event, message):
     print "TTY:{}:{}".format(event,message)
@@ -208,9 +212,9 @@ class netconifyCmdo(object):
     elif self.on_notify is not False:
       print "CMD:{}:{}".format(event,message)
 
-  ### -------------------------------------------------------------------------
-  ### tty routines
-  ### -------------------------------------------------------------------------
+  # -------------------------------------------------------------------------
+  # tty routines
+  # -------------------------------------------------------------------------
 
   def _tty_login(self):
 
@@ -239,11 +243,11 @@ class netconifyCmdo(object):
   def _tty_logout(self):
     self._tty.logout()    
 
-  ##### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  ### -------------------------------------------------------------------------
-  ### only gather facts
-  ### -------------------------------------------------------------------------
-  ##### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  
+  # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  # -------------------------------------------------------------------------
+  # only gather facts
+  # -------------------------------------------------------------------------
+  # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  
 
   def _only_gather_facts(self):
     self._tty_login()
@@ -253,11 +257,11 @@ class netconifyCmdo(object):
     self._tty_logout()
     return True    
 
-  ##### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  ### -------------------------------------------------------------------------
-  ### NETCONIFY the device!
-  ### -------------------------------------------------------------------------
-  ##### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  # -------------------------------------------------------------------------
+  # NETCONIFY the device!
+  # -------------------------------------------------------------------------
+  # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   def _netconify(self):
     self._tty_login()
@@ -292,11 +296,11 @@ class netconifyCmdo(object):
     self._has_changed = True
     return True
 
-  ##### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  ### -------------------------------------------------------------------------
-  ### dry-run mode is used to create the configuraiton file only
-  ### -------------------------------------------------------------------------
-  ##### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  # -------------------------------------------------------------------------
+  # dry-run mode is used to create the configuraiton file only
+  # -------------------------------------------------------------------------
+  # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   def _dry_run(self):
     # see if our config path can be determined from the args, rather
@@ -322,11 +326,11 @@ class netconifyCmdo(object):
     self._conf_build(path)    
     return True
 
-  ##### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  ### -------------------------------------------------------------------------
-  ### QFX MODE processing
-  ### -------------------------------------------------------------------------
-  ##### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  
+  # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  # -------------------------------------------------------------------------
+  # QFX MODE processing
+  # -------------------------------------------------------------------------
+  # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  
 
   def _qfx_mode(self):
     need_change = False
@@ -396,9 +400,9 @@ class netconifyCmdo(object):
     self._tty_logout
     return True
 
-  ### -------------------------------------------------------------------------
-  ### configuration file build/save methods
-  ### -------------------------------------------------------------------------
+  # -------------------------------------------------------------------------
+  # configuration file build/save methods
+  # -------------------------------------------------------------------------
 
   def _conf_fromargs(self):
     """ 
@@ -465,9 +469,9 @@ class netconifyCmdo(object):
       as_xml = etree.tostring(self._tty.nc.facts.inventory, pretty_print=True)
       with open(path,'w+') as f: f.write(as_xml)
 
-  ### -------------------------------------------------------------------------
-  ### load the inventory file
-  ### -------------------------------------------------------------------------
+  # -------------------------------------------------------------------------
+  # load the inventory file
+  # -------------------------------------------------------------------------
 
   def _ld_inv(self, path):
     """ loads the inventory file contents """
@@ -476,9 +480,9 @@ class netconifyCmdo(object):
     if not len(rd_files):
       raise RuntimeError('no_inv')
 
-  ### -------------------------------------------------------------------------
-  ### setup the name variables dictionary
-  ### -------------------------------------------------------------------------
+  # -------------------------------------------------------------------------
+  # setup the name variables dictionary
+  # -------------------------------------------------------------------------
 
   def _set_namevars(self):
     """ 
@@ -514,11 +518,11 @@ class netconifyCmdo(object):
       # into the configuraiton template
       self._hook_on_namevars(self._namevars)
 
-  ##### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  ### -------------------------------------------------------------------------
-  ### MISC device RPC commands & controls
-  ### -------------------------------------------------------------------------
-  ##### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  # -------------------------------------------------------------------------
+  # MISC device RPC commands & controls
+  # -------------------------------------------------------------------------
+  # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   _QFX_MODES = {
     'Standalone': QFX_MODE_SWITCH,
