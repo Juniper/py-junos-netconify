@@ -101,7 +101,7 @@ class Terminal(object):
     self._login_state_machine()
 
     # now start NETCONF XML 
-    self.notify('login','starting NETCONF')
+    self.notify('login',' OK ... starting NETCONF')
     self.nc.open(at_shell = self.at_shell)    
     return True
 
@@ -184,6 +184,10 @@ class Terminal(object):
         # a login prompt for whatever reason
         self.state = self._ST_TTY_NOLOGIN
         self.write('<close-session/>')    #@@@ this is a hack
+        ## if console connection have a banner or warning
+        ## comment-out line above and uncoment lines bellow ... better hack 
+        #sleep(5)
+        #self.write('\n')
 
     def _ev_shell():
       if self.state == self._ST_INIT:
