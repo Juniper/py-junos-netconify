@@ -95,7 +95,7 @@ class Terminal(object):
         start the NETCONF XML API process
         """
         self.notifier = notify
-        self.notify('login', 'connecting to TTY:{} ...'.format(self.tty_name))
+        self.notify('login', 'connecting to TTY:{0} ...'.format(self.tty_name))
         self._tty_open()
 
         self.notify('login', 'logging in ...')
@@ -161,8 +161,8 @@ class Terminal(object):
 
         prompt, found = self.read_prompt()
 
-#    print "CUR-STATE:{}".format(self.state)
-#    print "IN:{}:`{}`".format(found,prompt)
+#    print "CUR-STATE:{0}".format(self.state)
+#    print "IN:{0}:`{1}`".format(found,prompt)
 
         def _ev_login():
             self.state = self._ST_LOGIN

@@ -31,7 +31,7 @@ class Telnet(Terminal):
         self.host = host
         self.port = port
         self.timeout = kvargs.get('timeout', self.TIMEOUT)
-        self._tty_name = "{}:{}".format(host, port)
+        self._tty_name = "{0}:{1}".format(host, port)
 
         Terminal.__init__(self, **kvargs)
 
@@ -47,7 +47,7 @@ class Telnet(Terminal):
                 break
             except Exception as err:
                 retry -= 1
-                print "TTY busy, checking back in {} ...".format(self.RETRY_BACKOFF)
+                print "TTY busy, checking back in {0} ...".format(self.RETRY_BACKOFF)
                 sleep(self.RETRY_BACKOFF)
         else:
             raise RuntimeError("open_fail: port not ready")

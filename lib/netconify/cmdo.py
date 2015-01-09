@@ -214,7 +214,7 @@ class netconifyCmdo(object):
             if os.path.isfile(fname) is False:
                 self.results['failed'] = True
                 self.results[
-                    'errmsg'] = 'ERROR: unknown file: {}'.format(fname)
+                    'errmsg'] = 'ERROR: unknown file: {0}'.format(fname)
                 return self.results
 
         # --------------------
@@ -250,17 +250,17 @@ class netconifyCmdo(object):
     # -------------------------------------------------------------------------
 
     def _hook_exception(self, event, err):
-        sys.stderr.write("ERROR: {}\n".format(err.message))
+        sys.stderr.write("ERROR: {0}\n".format(str(err)))
         sys.exit(1)
 
-    def _tty_notifier(tty, event, message):
-        print "TTY:{}:{}".format(event, message)
+    def _tty_notifier(self, tty, event, message):
+        print "TTY:{0}:{1}".format(event, message)
 
     def _notify(self, event, message):
         if self.on_notify is not None:
             self.on_notify(event, message)
         elif self.on_notify is not False:
-            print "CMD:{}:{}".format(event, message)
+            print "CMD:{0}:{1}".format(event, message)
 
     # -------------------------------------------------------------------------
     # LOGIN/LOGOUT
@@ -331,8 +331,8 @@ class netconifyCmdo(object):
         srx_args['cluster_id'] = cluster_id
         srx_args['node'] = node
         self._notify('srx_cluster', 'set device to cluster mode, rebooting')
-        self._notify('srx_cluster', 'Cluster ID: {}'.format(cluster_id))
-        self._notify('srx_cluster', 'Node: {}'.format(node))
+        self._notify('srx_cluster', 'Cluster ID: {0}'.format(cluster_id))
+        self._notify('srx_cluster', 'Node: {0}'.format(node))
         self._tty.nc.enablecluster(cluster_id, node)
         self._skip_logout = True
         self.results['changed'] = True
@@ -355,7 +355,7 @@ class netconifyCmdo(object):
         """ shutdown or reboot """
         self._skip_logout = True
         mode = self._args.request_shutdown
-        self._notify('shutdown', 'shutdown {}'.format(mode))
+        self._notify('shutdown', 'shutdown {0}'.format(mode))
         nc = self._tty.nc
         shutdown = nc.poweroff if 'poweroff' == mode else nc.reboot
         shutdown()
@@ -367,7 +367,7 @@ class netconifyCmdo(object):
             return
         fname = self._save_name + '-facts.json'
         path = os.path.join(self._args.savedir, fname)
-        self._notify('facts', 'saving: {}'.format(path))
+        self._notify('facts', 'saving: {0}'.format(path))
         with open(path, 'w+') as f:
             f.write(json.dumps(self.facts))
 
@@ -379,7 +379,7 @@ class netconifyCmdo(object):
 
         fname = self._save_name + '-inventory.xml'
         path = os.path.join(self._args.savedir, fname)
-        self._notify('inventory', 'saving: {}'.format(path))
+        self._notify('inventory', 'saving: {0}'.format(path))
         as_xml = etree.tostring(
             self._tty.nc.facts.inventory, pretty_print=True)
         with open(path, 'w+') as f:
@@ -447,7 +447,7 @@ class netconifyCmdo(object):
         # --------------------------------------------------------
 
         if not any([facts['model'].startswith(m) for m in QFX_MODEL_LIST]):
-            self.results['errmsg'] = "Not on a QFX device [{}]".format(
+            self.results['errmsg'] = "Not on a QFX device [{0}]".format(
                 facts['model'])
             self.results['failed'] = True
             self._save_facts_json()
@@ -475,7 +475,7 @@ class netconifyCmdo(object):
         self._save_inventory_xml()
         self.results['facts'] = self.facts
 
-        self._notify('info', "QFX mode now/later: {}/{}".format(now, later))
+        self._notify('info', "QFX mode now/later: {0}/{1}".format(now, later))
         if now == later and later == self._args.qfx_mode:
             # nothing to do
             self._notify('info', 'No change required')
@@ -484,7 +484,7 @@ class netconifyCmdo(object):
 
         if change is True:
             self._notify('change',
-                         'Changing the mode to: {}'.format(self._args.qfx_mode))
+                         'Changing the mode to: {0}'.format(self._args.qfx_mode))
             self.results['changed'] = True
             self._qfx_device_mode_set()
 
@@ -529,6 +529,6 @@ class netconifyCmdo(object):
         """ sets the device mode """
         rpc = self._tty.nc.rpc
         mode = self._QFX_XML_MODES[self._args.qfx_mode]
-        cmd = '<request-chassis-device-mode><{}/></request-chassis-device-mode>'.format(mode)
+        cmd = '<request-chassis-device-mode><{0}/></request-chassis-device-mode>'.format(mode)
         got = rpc(cmd)
         return True

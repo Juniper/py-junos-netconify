@@ -35,7 +35,7 @@ class Facts(object):
         else:
             models = {}
             fpc = lambda m: m.xpath('../../re-name')[0].text
-            self.facts['models'] = {fpc(m): m.text.upper() for m in product_model}
+            self.facts['models'] = dict((fpc(m), m.text.upper()) for m in product_model)
 
     def chassis(self):
         try:
