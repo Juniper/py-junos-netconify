@@ -1,6 +1,5 @@
 import re
 import time
-import jinja2
 from lxml import etree
 from lxml.builder import E
 

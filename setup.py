@@ -3,7 +3,7 @@ import sys
 from glob import glob
 from setuptools import setup, find_packages
 
-requirements = ['pyserial', 'lxml', 'jinja2']
+requirements = ['pyserial', 'lxml']
 
 setup(
     name="junos-netconify",
@@ -29,6 +29,7 @@ setup(
         'Operating System :: OS Independent',
         'Programming Language :: Other Scripting Engines',
         'Programming Language :: Python',
+        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Topic :: Software Development :: Libraries',
         'Topic :: Software Development :: Libraries :: Application Frameworks',
