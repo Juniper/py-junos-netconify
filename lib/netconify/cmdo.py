@@ -11,6 +11,7 @@ import jinja2
 from ConfigParser import SafeConfigParser
 from getpass import getpass
 from lxml import etree
+import traceback
 
 import netconify
 import netconify.constants as C
@@ -231,7 +232,15 @@ class netconifyCmdo(object):
         # by the command args
         # -----------------------------------------------------
 
-        self._do_actions()
+        try:
+            self._do_actions()
+        except Exception as err:
+            try:
+                self._tty_logout()
+            except Exception as logout_err:
+                sys.stderr.write("ERROR: {0}\n".format(str(logout_err)))
+            traceback.print_exc()
+            self._hook_exception('action', err)
 
         # ----------------------------------------------------
         # logout, unless we don't need to (due to reboot,etc.)

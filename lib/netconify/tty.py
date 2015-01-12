@@ -83,7 +83,7 @@ class Terminal(object):
     def notify(self, event, message):
         if not self.notifier:
             return
-        self.notifier(event, message)
+        self.notifier(self, event, message)
 
     # -----------------------------------------------------------------------
     # Login/logout
