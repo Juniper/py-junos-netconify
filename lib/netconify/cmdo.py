@@ -11,6 +11,7 @@ import jinja2
 from ConfigParser import SafeConfigParser
 from getpass import getpass
 from lxml import etree
+import traceback
 
 import netconify
 import netconify.constants as C
@@ -112,6 +113,15 @@ class netconifyCmdo(object):
                        dest='gather_facts',
                        help='Gather facts and save them into SAVEDIR')
 
+        g.add_argument('--srx_cluster',
+                       dest='request_srx_cluster',
+                       help='cluster_id,node ... Invoke cluster on SRX device and reboot')
+
+        g.add_argument('--srx_cluster_disable',
+                       dest='request_srx_cluster_dis',
+                       action='store_true',
+                       help='Disable cluster mode on SRX device and reboot')
+
         # ---------------------------------------------------------------------
         # directories
         # ---------------------------------------------------------------------
@@ -205,7 +215,7 @@ class netconifyCmdo(object):
             if os.path.isfile(fname) is False:
                 self.results['failed'] = True
                 self.results[
-                    'errmsg'] = 'ERROR: unknown file: {}'.format(fname)
+                    'errmsg'] = 'ERROR: unknown file: {0}'.format(fname)
                 return self.results
 
         # --------------------
@@ -222,7 +232,15 @@ class netconifyCmdo(object):
         # by the command args
         # -----------------------------------------------------
 
-        self._do_actions()
+        try:
+            self._do_actions()
+        except Exception as err:
+            try:
+                self._tty_logout()
+            except Exception as logout_err:
+                sys.stderr.write("ERROR: {0}\n".format(str(logout_err)))
+            traceback.print_exc()
+            self._hook_exception('action', err)
 
         # ----------------------------------------------------
         # logout, unless we don't need to (due to reboot,etc.)
@@ -233,6 +251,11 @@ class netconifyCmdo(object):
                 self._tty_logout()
             except Exception as err:
                 self._hook_exception('logout', err)
+        else:
+            try:
+                self._tty._tty_close()
+            except Exception as err:
+                self._hook_exception('close', err)
 
         return self.results
 
@@ -241,17 +264,17 @@ class netconifyCmdo(object):
     # -------------------------------------------------------------------------
 
     def _hook_exception(self, event, err):
-        sys.stderr.write("ERROR: {}\n".format(err.message))
+        sys.stderr.write("ERROR: {0}\n".format(str(err)))
         sys.exit(1)
 
-    def _tty_notifier(tty, event, message):
-        print "TTY:{}:{}".format(event, message)
+    def _tty_notifier(self, tty, event, message):
+        print "TTY:{0}:{1}".format(event, message)
 
     def _notify(self, event, message):
         if self.on_notify is not None:
             self.on_notify(event, message)
         elif self.on_notify is not False:
-            print "CMD:{}:{}".format(event, message)
+            print "CMD:{0}:{1}".format(event, message)
 
     # -------------------------------------------------------------------------
     # LOGIN/LOGOUT
@@ -289,6 +312,14 @@ class netconifyCmdo(object):
     def _do_actions(self):
         args = self._args  # alias
 
+        if args.request_srx_cluster is not None:
+            self._srx_cluster()
+            return
+
+        if args.request_srx_cluster_dis:
+            self._srx_cluster_disable()
+            return
+
         if args.request_shutdown:
             self._shutdown()
             return
@@ -307,6 +338,26 @@ class netconifyCmdo(object):
         if args.qfx_mode is not None:
             self._qfx_mode()
 
+    def _srx_cluster(self):
+        """ Enable cluster mode on SRX device"""
+        srx_args = {}
+        cluster_id, node = re.split('[:,]', self._args.request_srx_cluster)
+        srx_args['cluster_id'] = cluster_id
+        srx_args['node'] = node
+        self._notify('srx_cluster', 'set device to cluster mode, rebooting')
+        self._notify('srx_cluster', 'Cluster ID: {0}'.format(cluster_id))
+        self._notify('srx_cluster', 'Node: {0}'.format(node))
+        self._tty.nc.enablecluster(cluster_id, node)
+        self._skip_logout = True
+        self.results['changed'] = True
+
+    def _srx_cluster_disable(self):
+        """ Disable cluster mode on SRX device"""
+        self._notify('srx_cluster', 'disable cluster mode on srx device, rebooting')
+        self._tty.nc.disablecluster()
+        self._skip_logout = True
+        self.results['changed'] = True
+
     def _zeroize(self):
         """ perform device ZEROIZE actions """
         self._notify('zeroize', 'ZEROIZE device, rebooting')
@@ -318,7 +369,7 @@ class netconifyCmdo(object):
         """ shutdown or reboot """
         self._skip_logout = True
         mode = self._args.request_shutdown
-        self._notify('shutdown', 'shutdown {}'.format(mode))
+        self._notify('shutdown', 'shutdown {0}'.format(mode))
         nc = self._tty.nc
         shutdown = nc.poweroff if 'poweroff' == mode else nc.reboot
         shutdown()
@@ -330,7 +381,7 @@ class netconifyCmdo(object):
             return
         fname = self._save_name + '-facts.json'
         path = os.path.join(self._args.savedir, fname)
-        self._notify('facts', 'saving: {}'.format(path))
+        self._notify('facts', 'saving: {0}'.format(path))
         with open(path, 'w+') as f:
             f.write(json.dumps(self.facts))
 
@@ -342,7 +393,7 @@ class netconifyCmdo(object):
 
         fname = self._save_name + '-inventory.xml'
         path = os.path.join(self._args.savedir, fname)
-        self._notify('inventory', 'saving: {}'.format(path))
+        self._notify('inventory', 'saving: {0}'.format(path))
         as_xml = etree.tostring(
             self._tty.nc.facts.inventory, pretty_print=True)
         with open(path, 'w+') as f:
@@ -410,7 +461,7 @@ class netconifyCmdo(object):
         # --------------------------------------------------------
 
         if not any([facts['model'].startswith(m) for m in QFX_MODEL_LIST]):
-            self.results['errmsg'] = "Not on a QFX device [{}]".format(
+            self.results['errmsg'] = "Not on a QFX device [{0}]".format(
                 facts['model'])
             self.results['failed'] = True
             self._save_facts_json()
@@ -438,7 +489,7 @@ class netconifyCmdo(object):
         self._save_inventory_xml()
         self.results['facts'] = self.facts
 
-        self._notify('info', "QFX mode now/later: {}/{}".format(now, later))
+        self._notify('info', "QFX mode now/later: {0}/{1}".format(now, later))
         if now == later and later == self._args.qfx_mode:
             # nothing to do
             self._notify('info', 'No change required')
@@ -447,7 +498,7 @@ class netconifyCmdo(object):
 
         if change is True:
             self._notify('change',
-                         'Changing the mode to: {}'.format(self._args.qfx_mode))
+                         'Changing the mode to: {0}'.format(self._args.qfx_mode))
             self.results['changed'] = True
             self._qfx_device_mode_set()
 
@@ -492,6 +543,6 @@ class netconifyCmdo(object):
         """ sets the device mode """
         rpc = self._tty.nc.rpc
         mode = self._QFX_XML_MODES[self._args.qfx_mode]
-        cmd = '<request-chassis-device-mode><{}/></request-chassis-device-mode>'.format(mode)
+        cmd = '<request-chassis-device-mode><{0}/></request-chassis-device-mode>'.format(mode)
         got = rpc(cmd)
         return True
