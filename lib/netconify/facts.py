@@ -33,7 +33,6 @@ class Facts(object):
         elif num_models == 1:
             self.facts['model'] = product_model[0].text.upper()
         else:
-            models = {}
             fpc = lambda m: m.xpath('../../re-name')[0].text
             self.facts['models'] = dict((fpc(m), m.text.upper()) for m in product_model)
 

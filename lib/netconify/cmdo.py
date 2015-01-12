@@ -7,8 +7,6 @@ import sys
 import json
 import re
 import argparse
-import jinja2
-from ConfigParser import SafeConfigParser
 from getpass import getpass
 from lxml import etree
 import traceback

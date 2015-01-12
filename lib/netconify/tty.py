@@ -1,6 +1,4 @@
-import re
 from time import sleep
-from datetime import datetime, timedelta
 
 from .tty_netconf import tty_netconf
 
