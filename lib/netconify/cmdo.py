@@ -251,6 +251,11 @@ class netconifyCmdo(object):
                 self._tty_logout()
             except Exception as err:
                 self._hook_exception('logout', err)
+        else:
+            try:
+                self._tty._tty_close()
+            except Exception as err:
+                self._hook_exception('close', err)
 
         return self.results
 
