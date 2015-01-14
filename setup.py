@@ -7,7 +7,7 @@ requirements = ['pyserial', 'lxml']
 
 setup(
     name="junos-netconify",
-    version="1.0.0.dev",
+    version="1.0.0",
     author="Jeremy Schulman",
     author_email="jnpr-community-netdev@juniper.net",
     description=("Junos console/bootstrap automation"),
