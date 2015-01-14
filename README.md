@@ -1,6 +1,6 @@
 The repo is under active development.  If you take a clone, you are getting the latest, and perhaps not entirely stable code.
 
-# ABOUT
+## ABOUT
 
 Junos console/bootstrap New-Out-Of-Box (NOOB) configuration automation. 
 
@@ -18,7 +18,7 @@ Primarily this library is used as a Console driver for the Junos Ansible Modules
 The `netconify` utility can be used perform configuration by logging into the serial console and pushing a configuration file to the device.
 
 
-# USAGE
+## USAGE
 
 ````
 
@@ -74,7 +74,7 @@ LOGIN options:
                         login attempts before giving up
 ````
 
-# EXAMPLE
+## EXAMPLE
 
 Junos NOOB devices can netconified:
 
@@ -111,7 +111,7 @@ Upgrading has the same requirements as installation and has the same format with
 
 	pip install -U junos-netconify
 
-# DEPENDENCIES
+## DEPENDENCIES
 
 This has been tested with Python 2.6 and 2.7.  The required modules are defined in `setup.py`.
 
@@ -119,7 +119,9 @@ This has been tested with Python 2.6 and 2.7.  The required modules are defined 
 
 Apache 2.0
   
-# CONTRIBUTORS
+## CONTRIBUTORS
 
   - Jeremy Schulman (@nwkautomaniac), Core developer
   - Rick Sherman (@shermdog01)
+  - Patrik Bok
+  - Ashley Burston
