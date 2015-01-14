@@ -47,7 +47,7 @@ class Telnet(Terminal):
                 break
             except Exception as err:
                 retry -= 1
-                print "TTY busy, checking back in {0} ...".format(self.RETRY_BACKOFF)
+                self.notify("TTY busy", "checking back in {0} ...".format(self.RETRY_BACKOFF))
                 sleep(self.RETRY_BACKOFF)
         else:
             raise RuntimeError("open_fail: port not ready")

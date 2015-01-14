@@ -3,7 +3,6 @@ This file defines the 'netconifyCmdo' class.
 Used by the 'netconify' shell utility.
 """
 import os
-import sys
 import json
 import re
 import argparse
@@ -236,7 +235,7 @@ class netconifyCmdo(object):
             try:
                 self._tty_logout()
             except Exception as logout_err:
-                sys.stderr.write("ERROR: {0}\n".format(str(logout_err)))
+                self._hook_exception('ERROR', "{0}\n".format(str(logout_err)))
             traceback.print_exc()
             self._hook_exception('action', err)
 
@@ -262,17 +261,17 @@ class netconifyCmdo(object):
     # -------------------------------------------------------------------------
 
     def _hook_exception(self, event, err):
-        sys.stderr.write("ERROR: {0}\n".format(str(err)))
-        sys.exit(1)
+        self._notify("ERROR", "{0}\n".format(str(err)))
+        raise
 
     def _tty_notifier(self, tty, event, message):
-        print "TTY:{0}:{1}".format(event, message)
+        self._notify("TTY:{0}".format(event), message)
 
     def _notify(self, event, message):
         if self.on_notify is not None:
-            self.on_notify(event, message)
+            self.on_notify(self, event, message)
         elif self.on_notify is not False:
-            print "CMD:{0}:{1}".format(event, message)
+            print "{0}:{1}".format(event, message)
 
     # -------------------------------------------------------------------------
     # LOGIN/LOGOUT
