@@ -3,7 +3,6 @@ This file defines the 'netconifyCmdo' class.
 Used by the 'netconify' shell utility.
 """
 import os
-import sys
 import json
 import re
 import argparse
@@ -263,7 +262,7 @@ class netconifyCmdo(object):
 
     def _hook_exception(self, event, err):
         self._notify("ERROR", "{0}\n".format(str(err)))
-        sys.exit(1)
+        raise
 
     def _tty_notifier(self, tty, event, message):
         self._notify("TTY:{0}".format(event), message)
