@@ -89,10 +89,11 @@ class tty_netconf(object):
         :True: otherwise return the response as XML for further processing.
         """
         rsp = self.rpc('<commit-configuration/>')
-        if 'ok' == rsp.tag:
-            return True     # some devices use 'ok'
-        if len(rsp.xpath('.//commit-success')) > 0:
-            return True
+        for child in rsp:
+            if 'ok' == rsp.tag:
+                return True     # some devices use 'ok'
+            if len(rsp.xpath('.//commit-success')) > 0:
+                return True
         return rsp
 
     def rollback(self):
@@ -162,7 +163,10 @@ class tty_netconf(object):
             cmd = '<{0}/>'.format(cmd)
         self._tty.rawwrite('<rpc>{0}</rpc>'.format(cmd))
         rsp = self._receive()
-        return rsp[0]  # return first child after the <rpc-reply>
+        try:
+            return rsp  # return all children after the <rpc-reply>
+        except:
+            return etree.XML('<error-in-receive/>')
 
     # -------------------------------------------------------------------------
     # LOW-LEVEL I/O for reading back XML response
