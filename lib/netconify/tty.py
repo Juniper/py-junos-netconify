@@ -35,6 +35,7 @@ class Terminal(object):
     _ST_DONE = 3
     _ST_BAD_PASSWD = 4
     _ST_TTY_NOLOGIN = 5
+    _ST_CTRLZ = 6
 
     _re_pat_login = '(?P<login>ogin:\s*$)'
 
@@ -43,7 +44,8 @@ class Terminal(object):
         '(?P<passwd>assword:\s*$)',
         '(?P<badpasswd>ogin incorrect)',
         '(?P<shell>%\s*$)',
-        '(?P<cli>[^\\-"]>\s*$)'
+        '(?P<cli>[^\\-"]>\s*$)',
+        '(?P<ctrlz><CTRL>Z[\s\n]*$)'
     ]
 
     # -----------------------------------------------------------------------
@@ -186,6 +188,10 @@ class Terminal(object):
                 self.state = self._ST_TTY_NOLOGIN
                 self.write('<close-session/>')  # @@@ this is a hack
 
+        def _ev_ctrlz():
+            self.state = self._ST_CTRLZ
+            self.write('\015')
+
         def _ev_shell():
             if self.state == self._ST_INIT:
                 # this means that the shell was left
@@ -214,7 +220,8 @@ class Terminal(object):
             'passwd': _ev_passwd,
             'badpasswd': _ev_bad_passwd,
             'shell': _ev_shell,
-            'cli': _ev_cli
+            'cli': _ev_cli,
+            'ctrlz': _ev_ctrlz
         }
 
         _ev_tbl.get(found, _ev_tty_nologin)()
