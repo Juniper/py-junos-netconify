@@ -187,4 +187,9 @@ class tty_netconf(object):
             as_xml = etree.XML(''.join(rxbuf))
             return as_xml
         except:
-            return etree.XML('<error-in-receive/>')
+            if '</xnm:error>' in rxbuf:
+                for x in rxbuf:
+                    if '<message>' in x:
+                        return etree.XML('<error-in-receive>' + x + '</error-in-receive>')
+            else:
+                return etree.XML('<error-in-receive/>')
