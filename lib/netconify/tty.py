@@ -1,14 +1,12 @@
-import re
 from time import sleep
 from datetime import datetime, timedelta
 
 from .tty_netconf import tty_netconf
 
 __all__ = ['Terminal']
-
-##### =========================================================================
-##### Terminal class
-##### =========================================================================
+# =========================================================================
+# Terminal class
+# =========================================================================
 
 class Terminal(object):
   """
@@ -19,7 +17,7 @@ class Terminal(object):
 
   Serial is needed for Junos devices that do not support
   the DHCP 'auto-installation' or 'ZTP' feature; i.e. you *MUST*
-  to the NOOB configuration via the CONSOLE.  
+  to the NOOB configuration via the CONSOLE.
 
   Serial is also useful for situations even when the Junos
   device supports auto-DHCP, but is not an option due to the
@@ -27,28 +25,30 @@ class Terminal(object):
   """
   TIMEOUT = 0.2           # serial readline timeout, seconds
   EXPECT_TIMEOUT = 10     # total read timeout, seconds
-  LOGIN_RETRY = 5         # total number of passes thru login state-machine
+  LOGIN_RETRY = 20         # total number of passes thru login state-machine
 
   _ST_INIT = 0
-  _ST_LOGIN = 1
-  _ST_PASSWD = 2
-  _ST_DONE = 3
-  _ST_BAD_PASSWD = 4
-  _ST_TTY_NOLOGIN = 5
+  _ST_LOADER = 1
+  _ST_LOGIN = 2
+  _ST_PASSWD = 3
+  _ST_DONE = 4
+  _ST_BAD_PASSWD = 5
+  _ST_TTY_NOLOGIN = 6
 
   _re_pat_login = '(?P<login>ogin:\s*$)'
 
   _RE_PAT = [
+    '(?P<loader>oader>\s*$)',
     _re_pat_login,
     '(?P<passwd>assword:\s*$)',
     '(?P<badpasswd>ogin incorrect)',
     '(?P<shell>%\s*$)',
     '(?P<cli>[^\\-"]>\s*$)'
-  ]  
+  ]
 
-  ##### -----------------------------------------------------------------------
-  ##### CONSTRUCTOR
-  ##### -----------------------------------------------------------------------
+  # -----------------------------------------------------------------------
+  # CONSTRUCTOR
+  # -----------------------------------------------------------------------
 
   def __init__(self, **kvargs):
     """
@@ -62,7 +62,7 @@ class Terminal(object):
     :kvargs['attempts']:
       the total number of login attempts thru the login
       state-machine
-    """    
+    """
     # logic args
     self.user = kvargs.get('user','root')
     self.passwd = kvargs.get('passwd','')
@@ -72,27 +72,29 @@ class Terminal(object):
     self.nc = tty_netconf( self )
     self.state = self._ST_INIT
     self.notifier = None
-    self._badpasswd = 0    
+    self._badpasswd = 0
+    self._loader = 0
 
   @property
   def tty_name(self):
     return self._tty_name
 
   def notify(self,event,message):
-    if not self.notifier: return
-    self.notifier(event,message)
+    if not self.notifier:
+         return
+    self.notifier(self, event, message)
 
-  ##### -----------------------------------------------------------------------
-  ##### Login/logout 
-  ##### -----------------------------------------------------------------------
+  # -----------------------------------------------------------------------
+  # Login/logout
+  # -----------------------------------------------------------------------
 
   def login(self, notify=None):
     """
-    open the TTY connection and login.  once the login is successful, 
+    open the TTY connection and login.  once the login is successful,
     start the NETCONF XML API process
     """
     self.notifier = notify
-    self.notify('login','connecting to TTY:{} ...'.format(self.tty_name))    
+    self.notify('login','connecting to TTY:{0} ...'.format(self.tty_name))
     self._tty_open()
 
     self.notify('login','logging in ...')
@@ -100,26 +102,26 @@ class Terminal(object):
     self.state = self._ST_INIT
     self._login_state_machine()
 
-    # now start NETCONF XML 
+    # now start NETCONF XML
     self.notify('login',' OK ... starting NETCONF')
-    self.nc.open(at_shell = self.at_shell)    
+    self.nc.open(at_shell = self.at_shell)
     return True
 
   def logout(self):
     """
     cleanly logout of the TTY
     """
-    self.notify('logout','logging out ...')
+    self.notify('logout', 'logging out ...')
     self.nc.close()
     self._logout_state_machine()
     return True
 
-  ##### -----------------------------------------------------------------------
-  ##### TTY logout state-machine
-  ##### -----------------------------------------------------------------------
+  # -----------------------------------------------------------------------
+  # TTY logout state-machine
+  # -----------------------------------------------------------------------
 
   def _logout_state_machine(self, attempt=0):
-    if 10 == attempt: 
+    if 10 == attempt:
       raise RuntimeError('logout_sm_failure')
 
     prompt,found = self.read_prompt()
@@ -148,18 +150,31 @@ class Terminal(object):
       sleep(1)
       self._logout_state_machine( attempt=attempt+1 )
 
-  ##### -----------------------------------------------------------------------
-  ##### TTY login state-machine
-  ##### -----------------------------------------------------------------------
+  # -----------------------------------------------------------------------
+  # TTY login state-machine
+  # -----------------------------------------------------------------------
 
   def _login_state_machine(self, attempt=0):
-    if self.login_attempts == attempt: 
+    if self.login_attempts == attempt:
       raise RuntimeError('login_sm_failure')
 
     prompt,found = self.read_prompt()
 
-#    print "CUR-STATE:{}".format(self.state)
-#    print "IN:{}:`{}`".format(found,prompt)
+#   UNCOMMENT TO SEE progress
+#     self.notify('\n\nlogin', "CUR-STATE:{0}".format(self.state))
+#     self.notify('login', "IN:{0}:`{1}`".format(found, prompt))
+#     self.notify('password', "{0}".format(self.passwd))
+#     self.notify('try', "{0}".format(attempt))
+
+    def _ev_loader():
+      self.state = self._ST_LOADER
+      self.write('boot')
+      self.write('\n')
+      sleep(300)
+      self._login_state_machine(attempt=0)
+      self._loader +=1
+      if self._loader == 2:
+        raise RuntimeError("propably corrupted image, stuck in loader")
 
     def _ev_login():
       self.state = self._ST_LOGIN
@@ -173,7 +188,9 @@ class Terminal(object):
       self.state = self._ST_BAD_PASSWD
       self.write('\n')
       self._badpasswd += 1
-      if self._badpasswd == 2:
+      if self._badpasswd == 3:
+          self.passwd = 'pass123'
+      if self._badpasswd == 5:
         raise RuntimeError("bad_passwd")
       # return through and try again ... could have been
       # prior failed attempt
@@ -183,35 +200,36 @@ class Terminal(object):
         # assume we're in a hung state, i.e. we don't see
         # a login prompt for whatever reason
         self.state = self._ST_TTY_NOLOGIN
-        self.write('<close-session/>')    #@@@ this is a hack
-        ## if console connection have a banner or warning
-        ## comment-out line above and uncoment lines bellow ... better hack 
-        #sleep(5)
-        #self.write('\n')
+        #self.write('<close-session/>')    #@@@ this is a hack
+        # if console connection have a banner or warning
+        # comment-out line above and uncoment lines bellow ... better hack
+        sleep(5)
+        self.write('\n')
 
     def _ev_shell():
       if self.state == self._ST_INIT:
-        # this means that the shell was left
-        # open.  probably not a good thing,
-        # so issue a notify, but move on.
-        self.notify('login_warn','shell login was open!')
+         # this means that the shell was left
+         # open.  probably not a good thing,
+         # so issue a notify, but move on.
+          self.notify('login_warn','shell login was open!')
 
       self.at_shell = True
-      self.state = self._ST_DONE      
+      self.state = self._ST_DONE
       # if we are here, then we are done
 
     def _ev_cli():
       if self.state == self._ST_INIT:
-        # this means that the shell was left open.  probably not a good thing,
-        # so issue a notify, hit <ENTER> and try again just to be sure...
-        self.notify('login_warn','waiting on TTY.')
-        sleep(5)
-#        return
+         # this means that the shell was left open.  probably not a good thing,
+         # so issue a notify, hit <ENTER> and try again just to be sure...
+         self.notify('login_warn','waiting on TTY.')
+         sleep(5)
+         #  return
 
       self.at_shell = False
       self.state = self._ST_DONE
 
     _ev_tbl = {
+      'loader': _ev_loader,
       'login': _ev_login,
       'passwd': _ev_passwd,
       'badpasswd': _ev_bad_passwd,

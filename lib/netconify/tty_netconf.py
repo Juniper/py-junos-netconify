@@ -13,23 +13,23 @@ _xmlns_strip = lambda text: _xmlns.sub('',text)
 _junosns = re.compile('junos:')
 _junosns_strip = lambda text: _junosns.sub('',text)
 
-##### =========================================================================
-##### xmlmode_netconf
-##### =========================================================================
+# =========================================================================
+# xmlmode_netconf
+# =========================================================================
 
 class tty_netconf(object):
   """
   Basic Junos XML API for bootstraping through the TTY
-  """  
+  """
 
   def __init__(self, tty):
     self._tty = tty
     self.hello = None
     self.facts = Facts(self)
 
-  ### -------------------------------------------------------------------------
-  ### NETCONF session open and close
-  ### -------------------------------------------------------------------------
+  # -------------------------------------------------------------------------
+  # NETCONF session open and close
+  # -------------------------------------------------------------------------
 
   def open(self, at_shell):
     """ start the XML API process and receive the 'hello' message """
@@ -40,7 +40,8 @@ class tty_netconf(object):
     while True:
       time.sleep(0.1)
       line = self._tty.read()
-      if line.startswith("<!--"): break
+      if line.startswith("<!--"): 
+			break
 
     self.hello = self._receive()
 
@@ -49,14 +50,15 @@ class tty_netconf(object):
 
     # if we do not have an open connection, then return now.
     if force is False:
-      if self.hello is None: return
+      if self.hello is None:
+			return
 
     self.rpc('close-session')
     # removed flush
 
-  ### -------------------------------------------------------------------------
-  ### Junos OS configuration methods
-  ### -------------------------------------------------------------------------
+  # -------------------------------------------------------------------------
+  # Junos OS configuration methods
+  # -------------------------------------------------------------------------
 
   def load(self, content, **kvargs):
     """
@@ -72,7 +74,7 @@ class tty_netconf(object):
     return rsp if rsp.findtext('.//ok') is None else True
 
   def commit_check(self):
-    """ 
+    """
     performs the Junos 'commit check' operation.  if successful return
     :True: otherwise return the response as XML for further processing.
     """
@@ -80,13 +82,15 @@ class tty_netconf(object):
     return True if 'ok' == rsp.tag else rsp
 
   def commit(self):
-    """ 
+    """
     performs the Junos 'commit' operation.  if successful return
     :True: otherwise return the response as XML for further processing.
     """
     rsp = self.rpc('<commit-configuration/>')
-    if 'ok' == rsp.tag: return True     # some devices use 'ok'
-    if len(rsp.xpath('.//commit-success')) > 0: return True   
+    if 'ok' == rsp.tag:
+		return True     # some devices use 'ok'
+    if len(rsp.xpath('.//commit-success')) > 0:
+		return True
     return rsp
 
   def rollback(self):
@@ -94,9 +98,9 @@ class tty_netconf(object):
     cmd = E('load-configuration', dict(compare='rollback', rollback="0"))
     return self.rpc(etree.tostring(cmd))
 
-  ### -------------------------------------------------------------------------
-  ### MISC device commands
-  ### -------------------------------------------------------------------------
+  # -------------------------------------------------------------------------
+  # MISC device commands
+  # -------------------------------------------------------------------------
 
   def reboot(self, in_min=0):
     """ issue a reboot to the device """
@@ -132,16 +136,16 @@ class tty_netconf(object):
     rsp = self.rpc(etree.tostring(cmd))
     #device will be set to new cluster ID:NODE value
     return True
-    
-  ### -------------------------------------------------------------------------
-  ### XML RPC command execution
-  ### -------------------------------------------------------------------------
+
+  # -------------------------------------------------------------------------
+  # XML RPC command execution
+  # -------------------------------------------------------------------------
 
   def rpc(self,cmd):
-    """ 
+    """
     Write the XML cmd and return the response as XML object.
 
-    :cmd: 
+    :cmd:
       <str> of the XML command.  if the :cmd: is not XML, then
       this routine will perform the brackets; i.e. if given
       'get-software-information', this routine will turn
@@ -153,21 +157,23 @@ class tty_netconf(object):
       performing by this routine.
     """
     if not cmd.startswith('<'): cmd = '<{}/>'.format(cmd)
-    self._tty.rawwrite('<rpc>{}</rpc>'.format(cmd))
-    rsp = self._receive()    
+    self._tty.rawwrite('<rpc>{0}</rpc>'.format(cmd))
+    rsp = self._receive()
     return rsp[0] # return first child after the <rpc-reply>
 
-  ### -------------------------------------------------------------------------
-  ### LOW-LEVEL I/O for reading back XML response
-  ### -------------------------------------------------------------------------
+  # -------------------------------------------------------------------------
+  # LOW-LEVEL I/O for reading back XML response
+  # -------------------------------------------------------------------------
 
   def _receive(self):
     """ process the XML response into an XML object """
     rxbuf = []
     while True:
       line = self._tty.read().strip()
-      if not line: continue                       # if we got nothin, go again
-      if _NETCONF_EOM == line: break              # check for end-of-message
+      if not line:
+		   continue                       # if we got nothin, go again
+      if _NETCONF_EOM == line:
+			break              # check for end-of-message
       rxbuf.append(line)
 
     rxbuf[0] = _xmlns_strip(rxbuf[0])         # nuke the xmlns
@@ -178,4 +184,9 @@ class tty_netconf(object):
       as_xml = etree.XML(''.join(rxbuf))
       return as_xml
     except:
-      return etree.XML('<error-in-receive/>')
+		if '</xnm:error>' in rxbuf:
+			for x in rxbuf:
+				if '<message>' in x:
+					return etree.XML('<error-in-receive>' + x + '</error-in-receive>')
+		else:
+			return etree.XML('<error-in-receive/>')

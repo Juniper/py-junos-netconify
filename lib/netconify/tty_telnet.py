@@ -3,9 +3,9 @@ import telnetlib
 
 from .tty import Terminal
 
-##### -------------------------------------------------------------------------
-##### Terminal connection over TELNET CONSOLE
-##### -------------------------------------------------------------------------
+# -------------------------------------------------------------------------
+# Terminal connection over TELNET CONSOLE
+# -------------------------------------------------------------------------
 
 class Telnet(Terminal):
   RETRY_OPEN = 3                # number of attempts to open TTY
@@ -21,44 +21,44 @@ class Telnet(Terminal):
       console server
 
     :kvargs['timeout']:
-      this is the tty read polling timeout.  
-      generally you should not have to tweak this.      
-    """    
+      this is the tty read polling timeout.
+      generally you should not have to tweak this.
+    """
     # initialize the underlying TTY device
 
     self._tn = telnetlib.Telnet()
     self.host = host
     self.port = port
     self.timeout = kvargs.get('timeout', self.TIMEOUT)
-    self._tty_name = "{}:{}".format(host,port)
+    self._tty_name = "{0}:{1}".format(host, port)
 
-    Terminal.__init__(self, **kvargs)  
+    Terminal.__init__(self, **kvargs)
 
-  ### -------------------------------------------------------------------------
-  ### I/O open close called from Terminal class
-  ### -------------------------------------------------------------------------
+  # -------------------------------------------------------------------------
+  # I/O open close called from Terminal class
+  # -------------------------------------------------------------------------
 
   def _tty_open(self):
     retry = self.RETRY_OPEN
     while retry > 0:
       try:
-        self._tn.open(self.host,self.port,self.timeout)
+        self._tn.open(self.host, self.port, self.timeout)
         break
       except Exception as err:
         retry -= 1
-        print "TTY busy, checking back in {} ...".format(self.RETRY_BACKOFF)
+        self._notify("TTY busy", "checking back in {0} ...".format(self.RETRY_BACKOFF))
         sleep(self.RETRY_BACKOFF)
     else:
-        raise RuntimeError("open_fail: port not ready")      
+        raise RuntimeError("open_fail: port not ready")
 
     self.write('\n')
 
   def _tty_close(self):
     self._tn.close()
 
-  ### -------------------------------------------------------------------------
-  ### I/O read and write called from Terminal class
-  ### -------------------------------------------------------------------------
+  # -------------------------------------------------------------------------
+  # I/O read and write called from Terminal class
+  # -------------------------------------------------------------------------
 
   def write(self, content):
     """ write content + <ENTER> """
@@ -70,7 +70,7 @@ class Telnet(Terminal):
 
   def read(self):
     """ read a single line """
-    return self._tn.read_until('\n', self.EXPECT_TIMEOUT)    
+    return self._tn.read_until('\n', self.EXPECT_TIMEOUT)
 
   def read_prompt(self):
     got = self._tn.expect(Terminal._RE_PAT, self.EXPECT_TIMEOUT)
