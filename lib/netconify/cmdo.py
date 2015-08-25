@@ -198,6 +198,11 @@ class netconifyCmdo(object):
 
         args = self._args # alias
 
+        if self._name is None:
+            self.results['failed'] = True
+            self.results['errmsg'] = 'ERROR: Device hostname not specified !!!'
+            return self.results
+
         # ----------------------------------
         # handle password input if necessary
         # ----------------------------------
@@ -301,6 +306,8 @@ class netconifyCmdo(object):
 
         notify = self.on_notify or self._tty_notifier
         self._tty.login( notify=notify )
+
+
 
     def _tty_logout(self):
         self._tty.logout()
