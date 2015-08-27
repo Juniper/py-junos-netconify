@@ -152,6 +152,9 @@ class netconifyCmdo(object):
         g.add_argument('-t', '--telnet',
             help='terminal server, <host>,<port>')
 
+        g.add_argument('-s', '--ssh',
+            help='ssh server, <host>,<port>,<user>,<password>')
+
         g.add_argument('--timeout',
             default='0.5',
             help='TTY connection timeout (s)')
@@ -198,10 +201,14 @@ class netconifyCmdo(object):
 
         args = self._args # alias
 
-        if self._name is None:
-            self.results['failed'] = True
-            self.results['errmsg'] = 'ERROR: Device hostname not specified !!!'
-            return self.results
+        # ---------------------------------------------------------------
+        # validate device hostname or IP address
+        # ---------------------------------------------------------------
+
+        # if self._name is None:
+        #     self.results['failed'] = True
+        #     self.results['errmsg'] = 'ERROR: Device hostname/IP not specified !!!'
+        #     return self.results
 
         # ----------------------------------
         # handle password input if necessary
@@ -298,6 +305,14 @@ class netconifyCmdo(object):
             tty_args['port'] = port
             self.console = ('telnet', host, port)
             self._tty = netconify.Telnet(**tty_args)
+        elif self._args.ssh is not None:
+            host, port, s_user, s_passwd = re.split('[,:]', self._args.ssh)
+            tty_args['host'] = host
+            tty_args['port'] = port
+            tty_args['s_user'] = s_user
+            tty_args['s_passwd'] = s_passwd
+            self.console = ('ssh', host, port, s_user, s_passwd)
+            self._tty = netconify.SecureShell(**tty_args)
         else:
             tty_args['port'] = self._args.port
             tty_args['baud'] = self._args.baud
