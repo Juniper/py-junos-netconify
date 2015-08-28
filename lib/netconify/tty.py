@@ -66,6 +66,8 @@ class Terminal(object):
     # logic args
     self.user = kvargs.get('user','root')
     self.passwd = kvargs.get('passwd','')
+    self.c_user = kvargs.get('s_user', self.user)
+    self.c_passwd = kvargs.get('s_passwd',self.passwd)
     self.login_attempts = kvargs.get('attempts') or self.LOGIN_RETRY
 
     # misc setup

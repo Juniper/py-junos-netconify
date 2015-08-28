@@ -309,8 +309,8 @@ class netconifyCmdo(object):
             host, port, s_user, s_passwd = re.split('[,:]', self._args.ssh)
             tty_args['host'] = host
             tty_args['port'] = port
-            tty_args['s_user'] = s_user
-            tty_args['s_passwd'] = s_passwd
+            tty_args['s_user'] = s_user or self._args.user
+            tty_args['s_passwd'] = s_passwd or self._args.passwd
             self.console = ('ssh', host, port, s_user, s_passwd)
             self._tty = netconify.SecureShell(**tty_args)
         else:

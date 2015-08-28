@@ -33,7 +33,6 @@ class tty_netconf(object):
 
   def open(self, at_shell):
     """ start the XML API process and receive the 'hello' message """
-
     nc_cmd = ('junoscript' ,'xml-mode')[at_shell]
     self._tty.write( nc_cmd+' netconf need-trailer' )
 
