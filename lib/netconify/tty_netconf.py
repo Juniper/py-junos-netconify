@@ -39,7 +39,8 @@ class tty_netconf(object):
     while True:
       time.sleep(0.1)
       line = self._tty.read()
-      if line.startswith("<!--"): 
+      #print("%s", line)
+      if line.startswith("<!--"):
 			break
 
     self.hello = self._receive()
@@ -172,7 +173,7 @@ class tty_netconf(object):
       if not line:
 		   continue                       # if we got nothin, go again
       if _NETCONF_EOM == line:
-			break              # check for end-of-message
+			break                         # check for end-of-message
       rxbuf.append(line)
 
     rxbuf[0] = _xmlns_strip(rxbuf[0])         # nuke the xmlns
