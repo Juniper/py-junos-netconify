@@ -1,8 +1,6 @@
-### NOTICE: Under active construction
+The repo is under active development.  If you take a clone, you are getting the latest, and perhaps not entirely stable code.
 
-In the process of streamlining the functionality based on recent use-cases, etc.  Please be advised that the README below is out of date at the momement.  The original code has been backed up on branch `0_0_0` should you want a copy.
-
-# ABOUT
+## ABOUT
 
 Junos console/bootstrap New-Out-Of-Box (NOOB) configuration automation. 
 
@@ -15,104 +13,115 @@ There are times when you MUST console into a Junos device to perform the NOOB co
 
 The general use-case:
 
-The `netconify` utility automatically performs this configuration by logging into the serial console, extracting information from the device, and using it to template build a configuration file, and load the result into the device.  The templates are stored in `/etc/netconify/skel` and the device variables for each of the named devices are stored in `/etc/netconify/hosts`.  There are some samples installed by this module.
+Primarily this library is used as a Console driver for the Junos Ansible Modules.
 
-# USAGE
+The `netconify` utility can be used perform configuration by logging into the serial console and pushing a configuration file to the device.
+
+
+## USAGE
 
 ````
-usage: netconify [-h] [-i INVENTORY] [-m EXPLICIT_MODEL] [-j EXPLICIT_CONF]
-                 [--qfx-node] [--qfx-switch] [--dry-run] [--no-save] [-F]
-                 [-C PREFIX] [-S [SAVEDIR]] [-p PORT] [-b BAUD] [-t TELNET]
-                 [-u USER] [-P PASSWD] [-k]
+
+usage: netconify [-h] [--version] [-f JUNOS_CONF_FILE] [--merge] [--qfx-node]
+                 [--qfx-switch] [--zeroize] [--shutdown {poweroff,reboot}]
+                 [--facts] [--srx_cluster REQUEST_SRX_CLUSTER]
+                 [--srx_cluster_disable] [-S [SAVEDIR]] [--no-save] [-p PORT]
+                 [-b BAUD] [-t TELNET] [--timeout TIMEOUT] [-u USER]
+                 [-P PASSWD] [-k] [-a ATTEMPTS]
                  [name]
 
 positional arguments:
-  name                  name of Junos NOOB device
+  name                  name of Junos device
 
 optional arguments:
   -h, --help            show this help message and exit
-  -i INVENTORY, --inventory INVENTORY
-                        inventory file of named NOOB devices and variables
+  --version             show program's version number and exit
 
-DEVICE controls:
-  -m EXPLICIT_MODEL, --model EXPLICIT_MODEL
-                        EXPLICIT: Junos device model, identifies file in
-                        <prefix>/skel
-  -j EXPLICIT_CONF, --conf EXPLICIT_CONF
-                        EXPLICIT: Junos NOOB configuration file
+DEVICE options:
+  -f JUNOS_CONF_FILE, --file JUNOS_CONF_FILE
+                        Junos configuration file
+  --merge               load-merge conf file, default is overwrite
   --qfx-node            Set QFX device into "node" mode
   --qfx-switch          Set QFX device into "switch" mode
+  --zeroize             ZEROIZE the device
+  --shutdown {poweroff,reboot}
+                        SHUTDOWN or REBOOT the device
+  --facts               Gather facts and save them into SAVEDIR
   --srx_cluster REQUEST_SRX_CLUSTER
                         cluster_id,node ... Invoke cluster on SRX device and
                         reboot
   --srx_cluster_disable
                         Disable cluster mode on SRX device and reboot
 
-MODE controls:
-  --dry-run             dry-run builds the config only
-  --no-save             Prevent files from begin saved into --savedir
-  -F, --facts           Only gather facts and save them into --savedir
-
-DIR controls:
-  -C PREFIX, --confdir PREFIX
-                        override path to etc directory configuration files
+DIRECTORY options:
   -S [SAVEDIR], --savedir [SAVEDIR]
-                        Files are saved into this directory, CWD by default
+                        Files are saved into this directory, $CWD by default
+  --no-save             Do not save facts and inventory files
 
-TTY controls:
+CONSOLE options:
   -p PORT, --port PORT  serial port device
   -b BAUD, --baud BAUD  serial port baud rate
+  -s SSH, --ssh SSH     ssh server, <host>,<port>,<user>,<password>
   -t TELNET, --telnet TELNET
-                        telnet/terminal server, <host>:<port>
+                        terminal server, <host>,<port>
+  --timeout TIMEOUT     TTY connection timeout (s)
 
-LOGIN controls:
+LOGIN options:
   -u USER, --user USER  login user name, defaults to "root"
   -P PASSWD, --passwd PASSWD
                         login user password, *empty* for NOOB
   -k                    prompt for user password
+  -a ATTEMPTS, --attempts ATTEMPTS
+                        login attempts before giving up
 ````
 
-# EXAMPLE
+## EXAMPLE
 
 Junos NOOB devices can netconified:
 
 ````
-unix> netconify demosrx
-````
-
-Where `demosrx` is the name identified in the `/etc/netconify/hosts` file.  You can omit the name if your configuration files are static; i.e. are not templates with variables.
-
-The NOOB conf file is selected from `/etc/netconify/skel` by the model of the device.  So if `demosrx` was an SRX210H device, the output of the netconify would look like the following.  I also included the command option to save a copy of the auto-generated config file.
-
-````
-[jeremy@linux]$ netconify demosrx --savedir . 
-TTY:login:connecting to serial port ...
+[rsherman@py-junos-netconify bin]$ ./netconify --telnet=host,23 -f host.conf
+TTY:login:connecting to TTY:host:23 ...
 TTY:login:logging in ...
 TTY:login:starting NETCONF
-CMD:conf:building from: /etc/netconify/skel/SRX210H.conf
-CMD:conf:saving: ./demosrx.conf
-CMD:conf:loading into device ...
-CMD:conf:commit ... please be patient
+conf:loading into device ...
+conf:commit ... please be patient
+conf:commit completed.
 TTY:logout:logging out ...
 ````
 
-### Static NOOB files
+The above example is connecting to the host via telnet on port 23 and loading the configuration file specified.  Additonal options such as serial connectivity, fact gathering, and device specific functions are identified in Usage.
 
-If your NOOB.conf files do not have any variables, i.e. static, then you do not necessarily need to provide the <name> argument; since there is no need to do <namevars> rendering.  For these use cases, you can use netconify with no parameters:
+## INSTALLATION
 
-````
-[jeremy@linux]$ netconify
-````
-The device facts will be used to determine the model information, and from there, the correct NOOB.conf file will be selected and applied.
-# INSTALLATION
-_not in PyPi yet_
+Installation requires Python 2.6 or 2.7 and associate `pip` tool
 
-git clone this repo and then use `python setup.py install` to install.  
+    pip install junos-netconify
+	
+Installing from Git is also supported (OS must have git installed).
 
-# DEPENDENCIES
+	To install the latest MASTER code
+	pip install git+https://github.com/Juniper/py-junos-netconify.git
+	-or-
+	To install a specific version, branch, tag, etc.
+	pip install git+https://github.com/Juniper/py-junos-netconify.git@<branch,tag,commit>
+	
+## UPGRADE
 
-This has been tested with python 2.7.  The required modules are defined in `setup.py`.
+Upgrading has the same requirements as installation and has the same format with the addition of -UPGRADE
 
-# WORK IN PROGRESS
+	pip install -U junos-netconify
 
-This is still a work in progress, but it is far enough along that you can start trying it out.  If you have any questions, please open an issue against the repo.  Thank you.
+## DEPENDENCIES
+
+This has been tested with Python 2.6 and 2.7.  The required modules are defined in `setup.py`.
+
+## LICENSE
+
+Apache 2.0
+  
+## CONTRIBUTORS
+
+  - Jeremy Schulman (@nwkautomaniac), Core developer
+  - Rick Sherman (@shermdog01)
+  - Patrik Bok
