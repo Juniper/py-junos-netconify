@@ -88,6 +88,7 @@ class SecureShell(Terminal):
         got = []
         while True:
             rd, wr, err = select([chan], [], [], self.SELECT_WAIT)
+            sleep(0.05)   # increase only with corresponding delay on ssh
             if rd:
                 data = chan.recv(self.RECVSZ)
                 got.append(data)

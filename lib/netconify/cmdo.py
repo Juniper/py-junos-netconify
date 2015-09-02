@@ -285,7 +285,7 @@ class netconifyCmdo(object):
         if self.on_notify is not None:
             self.on_notify(self, event, message)
         elif self.on_notify is not False:
-            print "CMD:{0}:{1}".format(event, message)
+            print "{0}:{1}".format(event, message)
 
     # -------------------------------------------------------------------------
     # LOGIN/LOGOUT
