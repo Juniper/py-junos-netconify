@@ -26,7 +26,7 @@ usage: netconify [-h] [--version] [-f JUNOS_CONF_FILE] [--merge] [--qfx-node]
                  [--qfx-switch] [--zeroize] [--shutdown {poweroff,reboot}]
                  [--facts] [--srx_cluster REQUEST_SRX_CLUSTER]
                  [--srx_cluster_disable] [-S [SAVEDIR]] [--no-save] [-p PORT]
-                 [-b BAUD] [-t TELNET] [--timeout TIMEOUT] [-u USER]
+                 [-b BAUD] [-t TELNET] [ -s SSH] [--timeout TIMEOUT] [-u USER]
                  [-P PASSWD] [-k] [-a ATTEMPTS]
                  [name]
 
