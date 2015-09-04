@@ -275,7 +275,7 @@ class netconifyCmdo(object):
     # -------------------------------------------------------------------------
 
     def _hook_exception(self, event, err):
-        self._notify("ERROR", "{0}\n".format(str(err)))
+        self._notify("ERROR", "{0}:{1}\n".format(event, str(err)))
         raise
 
     def _tty_notifier(self, tty, event, message):

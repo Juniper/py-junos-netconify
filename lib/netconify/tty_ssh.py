@@ -1,6 +1,6 @@
 from select import select
 import paramiko
-import re
+import re, logging
 from time import sleep
 from .tty import Terminal
 
@@ -20,6 +20,8 @@ class SecureShell(Terminal):
         self._ssh = paramiko.SSHClient()
         self._ssh.load_system_host_keys()
         self._ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        self._logger = logging.getLogger('paramiko.transport')
+        self._logger.disabled = True
         self.host = host
         self.port = port
         self.s_user = s_user
@@ -31,20 +33,15 @@ class SecureShell(Terminal):
         Terminal.__init__(self, **kvargs)
 
     def _tty_open(self):
-        while self.attempts > 0:
+        while True:
             try:
                 self._ssh.connect(hostname=self.host, port=int(self.port),
-                                  username=self.s_user, password=self.s_passwd, timeout=self.timeout, allow_agent=False,
-                                  look_for_keys=False)
+                                  username=self.s_user, password=self.s_passwd, timeout=self.timeout, allow_agent=False, look_for_keys=False)
                 break
-            except paramiko.AUTH_FAILED:
-                self.notify("Authentication failed when connecting to %s".format(self.host))
-            except paramiko.PasswordRequiredException:
-                self.notify("Bad username when connecting to %s".format(self.host))
+            except paramiko.BadHostKeyException:
+                self.notify("SSH", "Invalid host key for {0}".format(self.host))
             except paramiko.AuthenticationException:
-                self.attempts -= 1
-                self.notify("TTY busy", "checking back in {0} ...".format(self.RETRY_BACKOFF))
-                sleep(self.RETRY_BACKOFF)
+                self.notify("SSH", "Bad username or password when connecting to {0}".format(self.host))
         else:
             raise RuntimeError("open_fail: ssh port not ready")
 
@@ -62,8 +59,8 @@ class SecureShell(Terminal):
 
     def read(self):
         """
-        read a single line
-        this is and ugly hack to mimick serial and telnet which reads one byte at a time
+            read a single line
+            this is and ugly hack to mimic serial and telnet which reads one byte at a time
         """
         gotr = []
         while True:
@@ -84,15 +81,15 @@ class SecureShell(Terminal):
         self._chan.close()
 
     def read_prompt(self):
-        chan = self._chan
         got = []
         while True:
-            rd, wr, err = select([chan], [], [], self.SELECT_WAIT)
-            sleep(0.05)   # increase only with corresponding delay on ssh
+            rd, wr, err = select([self._chan], [], [], self.SELECT_WAIT)
+            sleep(0.05)
             if rd:
-                data = chan.recv(self.RECVSZ)
+                data = self._chan.recv(self.RECVSZ)
                 got.append(data)
                 found = _PROMPT.search(data)
                 if found is not None:
                     break
+
         return (got, found.lastgroup)
