@@ -78,7 +78,7 @@ LOGIN options:
 ## EXAMPLE
 
 Junos NOOB devices can netconified:
-
+###Telnet:
 ````
 [rsherman@py-junos-netconify bin]$ ./netconify --telnet=host,23 -f host.conf
 TTY:login:connecting to TTY:host:23 ...
@@ -89,8 +89,19 @@ conf:commit ... please be patient
 conf:commit completed.
 TTY:logout:logging out ...
 ````
-
-The above example is connecting to the host via telnet on port 23 and loading the configuration file specified.  Additonal options such as serial connectivity, fact gathering, and device specific functions are identified in Usage.
+The above example is connecting to the host via telnet on port 23 and loading the configuration file specified.
+###SSH:
+````
+r2600r@r2600r-mbp15 [~]netconify --facts --ssh=console-server,19876,c-user,pass123 -u user --passwd "pass123"
+TTY:login:connecting to TTY:console-server:19876:c-user:pass123 ...
+TTY:login:logging to device ...
+TTY:login: OK ... starting NETCONF
+facts:retrieving device facts...
+facts:saving: ./cfwj-lab1-0011a-facts.json
+inventory:saving: ./cfwj-lab1-0011a-inventory.xml
+TTY:logout:logging out ...
+````
+The above example is connecting to the host via ssh on port 19876 and gather device facts. Additonal options such as serial connectivity and device specific functions are identified in Usage. If ssh username and password for console are omited, -u/--passwd will be used instead for both console server authetication and device authetication --ssh=console-server,19876,, -u user --passwd "pass123"
 
 ## INSTALLATION
 
@@ -124,4 +135,4 @@ Apache 2.0
 
   - Jeremy Schulman (@nwkautomaniac), Core developer
   - Rick Sherman (@shermdog01)
-  - Patrik Bok
+  - Patrik Bok (@r2660r)
