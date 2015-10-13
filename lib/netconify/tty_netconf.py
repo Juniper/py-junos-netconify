@@ -1,5 +1,6 @@
 import re, time
 import jinja2
+import cmdo
 from lxml import etree
 from lxml.builder import E
 
@@ -39,7 +40,9 @@ class tty_netconf(object):
         while True:
             time.sleep(0.1)
             line = self._tty.read()
-            #print("%s", line)  #enable to see received NETCONF xml
+            if cmdo.verbose == 2:
+                print(line)  #enable to see received NETCONF xml
+
             if line.startswith("<!--"):
                 break
 
@@ -174,7 +177,8 @@ class tty_netconf(object):
         rxbuf = []
         while True:
             line = self._tty.read().strip()
-            #print("%s", line)  # enable to see received xml messages
+            if cmdo.verbose ==  2:
+                print(line)  # enable to see received xml messages
             if not line:
                 continue  # if we got nothin, go again
             if _NETCONF_EOM == line:

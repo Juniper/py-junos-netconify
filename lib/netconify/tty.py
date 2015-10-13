@@ -1,5 +1,6 @@
 from time import sleep
 from datetime import datetime, timedelta
+import cmdo
 
 from .tty_netconf import tty_netconf
 
@@ -96,16 +97,16 @@ class Terminal(object):
     start the NETCONF XML API process
     """
     self.notifier = notify
-    self.notify('login','connecting to TTY:{0} ...'.format(self.tty_name))
+    self.notify('TTY','connecting to TTY:{0} ...'.format(self.tty_name))
     self._tty_open()
 
-    self.notify('login','logging in ...')
+    self.notify('TTY','logging in ...')
 
     self.state = self._ST_INIT
     self._login_state_machine()
 
     # now start NETCONF XML
-    self.notify('login',' OK ... starting NETCONF')
+    self.notify('TTY',' OK ... starting NETCONF')
     self.nc.open(at_shell = self.at_shell)
     return True
 
@@ -113,7 +114,7 @@ class Terminal(object):
     """
     cleanly logout of the TTY
     """
-    self.notify('logout', 'logging out ...')
+    self.notify('TTY', 'logging out ...')
     self.nc.close()
     self._logout_state_machine()
     return True
@@ -162,11 +163,11 @@ class Terminal(object):
 
     prompt,found = self.read_prompt()
 
-#   UNCOMMENT TO SEE progress
-#     self.notify('\n\nlogin', "CUR-STATE:{0}".format(self.state))
-#     self.notify('login', "IN:{0}:`{1}`".format(found, prompt))
-#     self.notify('password', "{0}".format(self.passwd))
-#     self.notify('try', "{0}".format(attempt))
+    if cmdo.verbose == 1:
+        self.notify('\nDEBUG:current state', "{0}".format(self.state))
+        self.notify('DEBUG:login', "IN:{0}:`{1}`".format(found, prompt))
+        self.notify('DEBUG:password', "{0}".format(self.passwd))
+        self.notify('DEBUG:attempt', "{0}".format(attempt))
 
     def _ev_loader():
       self.state = self._ST_LOADER
@@ -190,8 +191,8 @@ class Terminal(object):
       self.state = self._ST_BAD_PASSWD
       self.write('\n')
       self._badpasswd += 1
-      if self._badpasswd == 3:
-          self.passwd = 'pass123'
+      # if self._badpasswd == 3:
+      #     self.passwd = 'pass123'
       if self._badpasswd == 5:
         raise RuntimeError("bad_passwd")
       # return through and try again ... could have been

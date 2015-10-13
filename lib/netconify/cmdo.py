@@ -7,6 +7,7 @@ import sys
 import json
 import re
 import argparse
+import logging
 import jinja2
 import traceback
 from ConfigParser import SafeConfigParser
@@ -22,6 +23,7 @@ __all__ = ['netconifyCmdo']
 QFX_MODEL_LIST = ['QFX3500', 'QFX3600', 'VIRTUAL CHASSIS']
 QFX_MODE_NODE = 'NODE'
 QFX_MODE_SWITCH = 'SWITCH'
+verbose = 0
 
 class netconifyCmdo(object):
 
@@ -70,7 +72,11 @@ class netconifyCmdo(object):
                         nargs='?',
                         help='name of Junos device')
 
-        p.add_argument('--version', action='version', version=C.version )
+        p.add_argument('--version', action='version', version=C.version)
+
+        p.add_argument('--verbose',
+                        type=int, default=0,
+                        help="increase verbose levevel: 0 = default, 1 = login debug, 2 = rpc reply debug")
 
         # ------------------------------------------------------------------------
         # Device level options
@@ -210,6 +216,13 @@ class netconifyCmdo(object):
         #     self.results['errmsg'] = 'ERROR: Device hostname/IP not specified !!!'
         #     return self.results
 
+        global verbose
+        debug = args.verbose
+        if debug ==  1: ## DEBUG LOGIN LEVEL
+            verbose = 1
+        elif debug == 2: ## DEBUG RPC REPLY
+             verbose = 2
+
         # ----------------------------------
         # handle password input if necessary
         # ----------------------------------
@@ -279,7 +292,7 @@ class netconifyCmdo(object):
         raise
 
     def _tty_notifier(self, tty, event, message):
-        self._notify("TTY:{0}".format(event), message)
+        self._notify("{0}".format(event), message)
 
     def _notify(self, event, message):
         if self.on_notify is not None:
