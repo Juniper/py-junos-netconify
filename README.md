@@ -36,6 +36,8 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   --version             show program's version number and exit
+  --verbose VERBOSE     increase verbose levevel: 0 = default, 1 = login
+                        debug, 2 = rpc reply debug
 
 DEVICE options:
   -f JUNOS_CONF_FILE, --file JUNOS_CONF_FILE
@@ -134,5 +136,5 @@ Apache 2.0
 ## CONTRIBUTORS
 
   - Jeremy Schulman (@nwkautomaniac), Core developer
-  - Rick Sherman (@shermdog01)
   - Patrik Bok (@r2660r)
+  - Rick Sherman (@shermdog01)
