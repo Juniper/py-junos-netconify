@@ -42,7 +42,7 @@ class Terminal(object):
         _re_pat_login,
         '(?P<passwd>assword:\s*$)',
         '(?P<badpasswd>ogin incorrect)',
-        '(?P<shell>%\s*$)',
+        '(?P<shell>%|#\s*$)',
         '(?P<cli>[^\\-"]>\s*$)'
     ]
 
