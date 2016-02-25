@@ -36,14 +36,17 @@ class tty_netconf(object):
         """ start the XML API process and receive the 'hello' message """
         nc_cmd = ('junoscript', 'xml-mode')[at_shell]
         self._tty.write(nc_cmd + ' netconf need-trailer')
+        start = time.time()
 
         while True:
+            delta = time.time() - start
             time.sleep(0.1)
             line = self._tty.read()
             if cmdo.verbose == 2:
                 print(line)  #enable to see received NETCONF xml
-
             if line.startswith("<!--"):
+                break
+            if delta >= (30):   #break the infinite loop
                 break
 
         self.hello = self._receive()
