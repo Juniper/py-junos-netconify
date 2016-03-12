@@ -1,8 +1,11 @@
 import re, time
 import jinja2
 import cmdo
+import pdb
 from lxml import etree
 from lxml.builder import E
+from datetime import datetime, timedelta
+
 
 from .facts import Facts
 
@@ -36,20 +39,23 @@ class tty_netconf(object):
         """ start the XML API process and receive the 'hello' message """
         nc_cmd = ('junoscript', 'xml-mode')[at_shell]
         self._tty.write(nc_cmd + ' netconf need-trailer')
-        start = time.time()
+        mark_start = datetime.now()
+        mark_end = mark_start + timedelta(seconds=15)
+        #pdb.set_trace()
 
-        while True:
-            delta = time.time() - start
+        while datetime.now() < mark_end:
             time.sleep(0.1)
             line = self._tty.read()
             if cmdo.verbose == 2:
                 print(line)  #enable to see received NETCONF xml
             if line.startswith("<!--"):
                 break
-            if delta >= (30):   #break the infinite loop
-                break
+        else:
+            # exceeded the while loop timeout
+            raise RuntimeError("Netconify Error: netconf not responding")
 
         self.hello = self._receive()
+
 
     def close(self, force=False):
         """ issue the XML API to close the session """

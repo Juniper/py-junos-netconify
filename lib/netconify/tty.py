@@ -203,11 +203,11 @@ class Terminal(object):
         # assume we're in a hung state, i.e. we don't see
         # a login prompt for whatever reason
         self.state = self._ST_TTY_NOLOGIN
-        #self.write('<close-session/>')    #@@@ this is a hack
+        self.write('<close-session/>')    #@@@ this is a hack
         # if console connection have a banner or warning
         # comment-out line above and uncoment lines bellow ... better hack
-        sleep(5)
-        self.write('\n')
+        #sleep(5)
+        #self.write('\n')
 
     def _ev_shell():
       if self.state == self._ST_INIT:

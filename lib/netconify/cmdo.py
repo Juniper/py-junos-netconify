@@ -412,12 +412,16 @@ class netconifyCmdo(object):
 
     def _save_facts_json(self):
         if self._args.no_save is True:
+            self._notify('facts','{0}'.format(self.facts))
             return
         fname = self._save_name + '-facts.json'
         path = os.path.join(self._args.savedir, fname)
         self._notify('facts', 'saving: {0}'.format(path))
-        with open(path, 'w+') as f:
-            f.write(json.dumps(self.facts))
+        try:
+            with open(path, 'w+') as f:
+                f.write(json.dumps(self.facts))
+        except:
+            raise RuntimeError("Netconify Error: can not write file, check directory persmissions")
 
     def _save_inventory_xml(self):
         if self._args.no_save is True:

@@ -3,6 +3,7 @@ import paramiko
 import re, logging
 from time import sleep
 from .tty import Terminal
+from datetime import datetime, timedelta
 
 _PROMPT = re.compile('|'.join(Terminal._RE_PAT))
 
@@ -82,7 +83,11 @@ class SecureShell(Terminal):
 
     def read_prompt(self):
         got = []
-        while True:
+        mark_start = datetime.now()
+        mark_end = mark_start + timedelta(seconds=15)
+        while datetime.now() < mark_end:
+            delta = time.time() - start
+            time.sleep(0.1)
             rd, wr, err = select([self._chan], [], [], self.SELECT_WAIT)
             sleep(0.05)
             if rd:
@@ -91,5 +96,8 @@ class SecureShell(Terminal):
                 found = _PROMPT.search(data)
                 if found is not None:
                     break
+        else:
+            # exceeded the while loop timeout
+            raise RuntimeError("Netconify Error: ssh could not find string Login:")
 
         return (got, found.lastgroup)
