@@ -19,7 +19,7 @@ class Facts(object):
 
         # extract the version
         # First try the <junos-version> tag present in >= 15.1
-        swinfo = rsp.xpath('.//junos-version')[0].text
+	swinfo = rsp.findtext('junos-version', default=None)
         if not swinfo:
             # For < 15.1, get version from the "junos" package.
             pkginfo = rsp.xpath(
