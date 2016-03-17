@@ -85,6 +85,7 @@ class SecureShell(Terminal):
         got = []
         mark_start = datetime.now()
         mark_end = mark_start + timedelta(seconds=15)
+
         while datetime.now() < mark_end:
             delta = time.time() - start
             time.sleep(0.1)
