@@ -113,14 +113,14 @@ class Terminal(object):
         self.nc.open(at_shell=self.at_shell)
         return True
 
-        def logout(self):
-            """
-            cleanly logout of the TTY
-            """
-            self.notify('logout', 'logging out ...')
-            self.nc.close()
-            self._logout_state_machine()
-            return True
+    def logout(self):
+        """
+        cleanly logout of the TTY
+        """
+        self.notify('logout', 'logging out ...')
+        self.nc.close()
+        self._logout_state_machine()
+        return True
 
         # ---------------------------------------------------------------------
         # TTY logout state-machine
@@ -234,19 +234,19 @@ class Terminal(object):
             self.at_shell = False
             self.state = self._ST_DONE
 
-            _ev_tbl = {
-                'loader': _ev_loader,
-                'login': _ev_login,
-                'passwd': _ev_passwd,
-                'badpasswd': _ev_bad_passwd,
-                'shell': _ev_shell,
-                'cli': _ev_cli
-            }
+        _ev_tbl = {
+            'loader': _ev_loader,
+            'login': _ev_login,
+            'passwd': _ev_passwd,
+            'badpasswd': _ev_bad_passwd,
+            'shell': _ev_shell,
+            'cli': _ev_cli
+        }
 
-            _ev_tbl.get(found, _ev_tty_nologin)()
+        _ev_tbl.get(found, _ev_tty_nologin)()
 
-            if self.state == self._ST_DONE:
-                return True
-            else:
-                # if we are here, then loop the event again
-                self._login_state_machine(attempt + 1)
+        if self.state == self._ST_DONE:
+            return True
+        else:
+            # if we are here, then loop the event again
+            self._login_state_machine(attempt + 1)
