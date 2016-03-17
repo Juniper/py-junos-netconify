@@ -3,11 +3,11 @@ import sys
 from glob import glob
 from setuptools import setup, find_packages
 
-requirements = ['pyserial', 'lxml']
+requirements = ['pyserial', 'lxml', 'paramiko']
 
 setup(
     name="junos-netconify",
-    version="1.0.2",
+    version="1.0.3",
     author="Jeremy Schulman",
     author_email="jnpr-community-netdev@juniper.net",
     description=("Junos console/bootstrap automation"),
