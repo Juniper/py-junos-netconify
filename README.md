@@ -26,7 +26,7 @@ usage: netconify [-h] [--version] [-f JUNOS_CONF_FILE] [--merge] [--qfx-node]
                  [--qfx-switch] [--zeroize] [--shutdown {poweroff,reboot}]
                  [--facts] [--srx_cluster REQUEST_SRX_CLUSTER]
                  [--srx_cluster_disable] [-S [SAVEDIR]] [--no-save] [-p PORT]
-                 [-b BAUD] [-t TELNET] [--timeout TIMEOUT] [-u USER]
+                 [-b BAUD] [-t TELNET] [ -s SSH] [--timeout TIMEOUT] [-u USER]
                  [-P PASSWD] [-k] [-a ATTEMPTS]
                  [name]
 
@@ -36,6 +36,8 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   --version             show program's version number and exit
+  --verbose VERBOSE     increase verbose levevel: 0 = default, 1 = login
+                        debug, 2 = rpc reply debug
 
 DEVICE options:
   -f JUNOS_CONF_FILE, --file JUNOS_CONF_FILE
@@ -61,6 +63,7 @@ DIRECTORY options:
 CONSOLE options:
   -p PORT, --port PORT  serial port device
   -b BAUD, --baud BAUD  serial port baud rate
+  -s SSH, --ssh SSH     ssh server, <host>,<port>,<user>,<password>
   -t TELNET, --telnet TELNET
                         terminal server, <host>,<port>
   --timeout TIMEOUT     TTY connection timeout (s)
@@ -78,6 +81,7 @@ LOGIN options:
 
 Junos NOOB devices can netconified:
 
+###Telnet:
 ````
 [rsherman@py-junos-netconify bin]$ ./netconify --telnet=host,23 -f host.conf
 TTY:login:connecting to TTY:host:23 ...
@@ -88,8 +92,20 @@ conf:commit ... please be patient
 conf:commit completed.
 TTY:logout:logging out ...
 ````
+The above example is connecting to the host via telnet on port 23 and loading the configuration file specified.
+###SSH:
+````
+r2600r@r2600r-mbp15 [~]netconify --facts --ssh=console-server,19876,c-user,pass123 -u user --passwd "pass123"
+TTY:login:connecting to TTY:console-server:19876:c-user:pass123 ...
+TTY:login:logging to device ...
+TTY:login: OK ... starting NETCONF
+facts:retrieving device facts...
+facts:saving: ./cfwj-lab1-0011a-facts.json
+inventory:saving: ./cfwj-lab1-0011a-inventory.xml
+TTY:logout:logging out ...
+````
+The above example is connecting to the host via ssh on port 19876 and gather device facts. Additonal options such as serial connectivity and device specific functions are identified in Usage. If ssh username and password for console are omited, -u/--passwd will be used instead for both console server authetication and device authetication --ssh=console-server,19876,, -u user --passwd "pass123"
 
-The above example is connecting to the host via telnet on port 23 and loading the configuration file specified.  Additonal options such as serial connectivity, fact gathering, and device specific functions are identified in Usage.
 
 ## INSTALLATION
 
@@ -123,5 +139,5 @@ Apache 2.0
 
   - Jeremy Schulman (@nwkautomaniac), Core developer
   - Rick Sherman (@shermdog01)
-  - Patrik Bok
+  - Patrik Bok (@r2660r)
   - Ashley Burston
