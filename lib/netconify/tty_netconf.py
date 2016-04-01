@@ -1,7 +1,10 @@
 import re
 import time
+from . import cmdo
 from lxml import etree
 from lxml.builder import E
+from datetime import datetime, timedelta
+
 
 from .facts import Facts
 
@@ -127,16 +130,34 @@ class tty_netconf(object):
 
     def enablecluster(self, cluster_id, node):
         """ issue request chassis cluster command """
-        cmd = E('set-chassis-cluster-enable', E('cluster-id', str(cluster_id)), E('node', str(node)), E('reboot'))
+        cmd = E('set-chassis-cluster-enable',
+                E('cluster-id',
+                  str(cluster_id)),
+                E('node',
+                  str(node)),
+                E('reboot'))
         rsp = self.rpc(etree.tostring(cmd))
-        #device will be set to new cluster ID:NODE value
+        # device will be set to new cluster ID:NODE value
         return True
 
     def disablecluster(self):
         """ issue set chassis cluster disable to the device nad reboot """
         cmd = E.command('set chassis cluster disable reboot')
         rsp = self.rpc(etree.tostring(cmd))
-        # No need to check error exception, device will be rebooted even if not in cluster
+        # No need to check error exception, device will be rebooted even if not
+        # in cluster
+        return True
+
+    def enablecluster(self, cluster_id, node):
+        """ issue request chassis cluster command """
+        cmd = E('set-chassis-cluster-enable',
+                E('cluster-id',
+                  str(cluster_id)),
+                E('node',
+                  str(node)),
+                E('reboot'))
+        rsp = self.rpc(etree.tostring(cmd))
+        # device will be set to new cluster ID:NODE value
         return True
 
     # -------------------------------------------------------------------------
@@ -162,7 +183,10 @@ class tty_netconf(object):
             cmd = '<{0}/>'.format(cmd)
         self._tty.rawwrite('<rpc>{0}</rpc>'.format(cmd))
         rsp = self._receive()
-        return rsp[0]  # return first child after the <rpc-reply>
+        try:
+            return rsp[0]  # return first child after the <rpc-reply>
+        except:
+            return etree.XML('<error-in-receive/>')
 
     # -------------------------------------------------------------------------
     # LOW-LEVEL I/O for reading back XML response
@@ -173,15 +197,17 @@ class tty_netconf(object):
         rxbuf = []
         while True:
             line = self._tty.read().strip()
+            if cmdo.verbose == 2:
+                print(line)  # enable to see received xml messages
             if not line:
-                continue                       # if we got nothin, go again
+                continue  # if we got nothin, go again
             if _NETCONF_EOM == line:
-                break              # check for end-of-message
+                break  # check for end-of-message
             rxbuf.append(line)
 
-        rxbuf[0] = _xmlns_strip(rxbuf[0])         # nuke the xmlns
-        rxbuf[1] = _xmlns_strip(rxbuf[1])         # nuke the xmlns
-        rxbuf = map(_junosns_strip, rxbuf)        # nuke junos: namespace
+        rxbuf[0] = _xmlns_strip(rxbuf[0])  # nuke the xmlns
+        rxbuf[1] = _xmlns_strip(rxbuf[1])  # nuke the xmlns
+        rxbuf = map(_junosns_strip, rxbuf)  # nuke junos: namespace
 
         try:
             as_xml = etree.XML(''.join(rxbuf))
@@ -190,6 +216,7 @@ class tty_netconf(object):
             if '</xnm:error>' in rxbuf:
                 for x in rxbuf:
                     if '<message>' in x:
-                        return etree.XML('<error-in-receive>' + x + '</error-in-receive>')
+                        return etree.XML(
+                            '<error-in-receive>' + x + '</error-in-receive>')
             else:
                 return etree.XML('<error-in-receive/>')

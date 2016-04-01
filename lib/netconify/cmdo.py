@@ -3,9 +3,13 @@ This file defines the 'netconifyCmdo' class.
 Used by the 'netconify' shell utility.
 """
 import os
+import sys
 import json
 import re
 import argparse
+import logging
+import traceback
+from ConfigParser import SafeConfigParser
 from getpass import getpass
 from lxml import etree
 import traceback
@@ -19,6 +23,7 @@ __all__ = ['netconifyCmdo']
 QFX_MODEL_LIST = ['QFX3500', 'QFX3600', 'VIRTUAL CHASSIS']
 QFX_MODE_NODE = 'NODE'
 QFX_MODE_SWITCH = 'SWITCH'
+verbose = 0
 
 
 class netconifyCmdo(object):
@@ -69,6 +74,10 @@ class netconifyCmdo(object):
                        help='name of Junos device')
 
         p.add_argument('--version', action='version', version=C.version)
+
+        p.add_argument('--verbose',
+                       type=int, default=0,
+                       help="increase verbose levevel: 0 = default, 1 = login debug, 2 = rpc reply debug")
 
         # ---------------------------------------------------------------------
         # Device level options
@@ -177,6 +186,9 @@ class netconifyCmdo(object):
                        default=10,
                        help='login attempts before giving up')
 
+        g.add_argument('-s', '--ssh',
+                       help='ssh server, <host>,<port>,<user>,<password>')
+
     # -------------------------------------------------------------------------
     # run command, can be involved from SHELL or programmatically
     # -------------------------------------------------------------------------
@@ -195,6 +207,22 @@ class netconifyCmdo(object):
             self._hook_exception('parse_args', err)
 
         args = self._args  # alias
+
+        # ---------------------------------------------------------------
+        # validate device hostname or IP address
+        # ---------------------------------------------------------------
+
+        # if self._name is None:
+        #     self.results['failed'] = True
+        #     self.results['errmsg'] = 'ERROR: Device hostname/IP not specified !!!'
+        #     return self.results
+
+        global verbose
+        debug = args.verbose
+        if debug == 1:  # DEBUG LOGIN LEVEL
+            verbose = 1
+        elif debug == 2:  # DEBUG RPC REPLY
+            verbose = 2
 
         # ----------------------------------
         # handle password input if necessary
@@ -261,11 +289,11 @@ class netconifyCmdo(object):
     # -------------------------------------------------------------------------
 
     def _hook_exception(self, event, err):
-        self._notify("ERROR", "{0}\n".format(str(err)))
+        self._notify("ERROR", "{0}:{1}\n".format(event, str(err)))
         raise
 
     def _tty_notifier(self, tty, event, message):
-        self._notify("TTY:{0}".format(event), message)
+        self._notify("{0}".format(event), message)
 
     def _notify(self, event, message):
         if self.on_notify is not None:
@@ -291,6 +319,14 @@ class netconifyCmdo(object):
             tty_args['port'] = port
             self.console = ('telnet', host, port)
             self._tty = netconify.Telnet(**tty_args)
+        elif self._args.ssh is not None:
+            host, port, s_user, s_passwd = re.split('[,:]', self._args.ssh)
+            tty_args['host'] = host
+            tty_args['port'] = port
+            tty_args['s_user'] = s_user or self._args.user
+            tty_args['s_passwd'] = s_passwd or self._args.passwd
+            self.console = ('ssh', host, port, s_user, s_passwd)
+            self._tty = netconify.SecureShell(**tty_args)
         else:
             tty_args['port'] = self._args.port
             tty_args['baud'] = self._args.baud
@@ -350,7 +386,9 @@ class netconifyCmdo(object):
 
     def _srx_cluster_disable(self):
         """ Disable cluster mode on SRX device"""
-        self._notify('srx_cluster', 'disable cluster mode on srx device, rebooting')
+        self._notify(
+            'srx_cluster',
+            'disable cluster mode on srx device, rebooting')
         self._tty.nc.disablecluster()
         self._skip_logout = True
         self.results['changed'] = True
@@ -375,12 +413,17 @@ class netconifyCmdo(object):
 
     def _save_facts_json(self):
         if self._args.no_save is True:
+            self._notify('facts', '{0}'.format(self.facts))
             return
         fname = self._save_name + '-facts.json'
         path = os.path.join(self._args.savedir, fname)
         self._notify('facts', 'saving: {0}'.format(path))
-        with open(path, 'w+') as f:
-            f.write(json.dumps(self.facts))
+        try:
+            with open(path, 'w+') as f:
+                f.write(json.dumps(self.facts))
+        except:
+            raise RuntimeError(
+                "Netconify Error: can not write file, check directory persmissions")
 
     def _save_inventory_xml(self):
         if self._args.no_save is True:
@@ -540,6 +583,7 @@ class netconifyCmdo(object):
         """ sets the device mode """
         rpc = self._tty.nc.rpc
         mode = self._QFX_XML_MODES[self._args.qfx_mode]
-        cmd = '<request-chassis-device-mode><{0}/></request-chassis-device-mode>'.format(mode)
+        cmd = '<request-chassis-device-mode><{0}/></request-chassis-device-mode>'.format(
+            mode)
         got = rpc(cmd)
         return True
