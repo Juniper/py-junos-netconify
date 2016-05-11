@@ -317,6 +317,7 @@ class netconifyCmdo(object):
             host, port = re.split('[,:]', self._args.telnet)
             tty_args['host'] = host
             tty_args['port'] = port
+            tty_args['baud'] = self._args.baud
             self.console = ('telnet', host, port)
             self._tty = netconify.Telnet(**tty_args)
         elif self._args.ssh is not None:

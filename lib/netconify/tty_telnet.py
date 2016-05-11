@@ -31,7 +31,7 @@ class Telnet(Terminal):
         self.host = host
         self.port = port
         self.timeout = kvargs.get('timeout', self.TIMEOUT)
-        self.baudrate = kvargs.get('baudrate', 9600)
+        self.baud = kvargs.get('baud', 9600)
         self._tty_name = "{0}:{1}".format(host, port)
 
         Terminal.__init__(self, **kvargs)
@@ -63,22 +63,32 @@ class Telnet(Terminal):
     # -------------------------------------------------------------------------
 
     def write(self, content):
-        # Write data according to defined baudrate
+        # If baud set to 0 write full speed
+        if (int(self.baud) == 0):
+            self._tn.write(content + '\n')
+            return None
+
+        # Write data according to defined baud
         # per 8 bit of data there are 2 additional bits on the line
         # (parity and stop bits)
         for char in content:
             self._tn.write(char)
-            wtime = 10/float(self.baudrate)
+            wtime = 10/float(self.baud)
             sleep(wtime)                          # do not remove
         self._tn.write('\n')
 
     def rawwrite(self, content):
-        # Write data according to defined baudrate
+        # If baud set to 0 write full speed
+        if (int(self.baud) == 0):
+            self._tn.write(content + '\n')
+            return None
+
+        # Write data according to defined baud
         # per 1 byte of data there are 2 additional bits on the line
         # (parity and stop bits)
         for char in content:
             self._tn.write(char)
-            wtime = 10/float(self.baudrate)
+            wtime = 10/float(self.baud)
             sleep(wtime)                          # do not remove
         self._tn.write('\n’)
 
