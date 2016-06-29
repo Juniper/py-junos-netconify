@@ -7,6 +7,20 @@ from .tty import Terminal
 # Terminal connection over TELNET CONSOLE
 # -------------------------------------------------------------------------
 
+def _ignore_options(socket, command, option):
+    """
+    Used as a Telnet.set_option_negotiation_callback() function.
+
+    If no option negotiation callback function is set, telnetlib
+    will pass Telnet options back to netconify in the data stream.
+    This is especially problematic for the AUTHENTICATION (0x25) option.
+    0x25 is an ASCII % character and confuses the login state machine into
+    thinking that it is at the shell prompt.
+    This function simply receives and ignores Telnet options. This prevents
+    the options from appearing in the data stream and confusing the
+    login state machine.
+    """
+    pass
 
 class Telnet(Terminal):
     RETRY_OPEN = 3                # number of attempts to open TTY
@@ -41,6 +55,7 @@ class Telnet(Terminal):
 
     def _tty_open(self):
         retry = self.RETRY_OPEN
+        self._tn.set_option_negotiation_callback(_ignore_options)
         while retry > 0:
             try:
                 self._tn.open(self.host, self.port, self.timeout)
