@@ -2,7 +2,7 @@ from select import select
 import paramiko
 import re
 import logging
-from time import sleep
+import time
 from .tty import Terminal
 from datetime import datetime, timedelta
 
@@ -97,7 +97,7 @@ class SecureShell(Terminal):
             delta = time.time() - start
             time.sleep(0.1)
             rd, wr, err = select([self._chan], [], [], self.SELECT_WAIT)
-            sleep(0.05)
+            time.sleep(0.05)
             if rd:
                 data = self._chan.recv(self.RECVSZ)
                 got.append(data)
