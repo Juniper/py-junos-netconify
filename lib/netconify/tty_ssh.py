@@ -2,9 +2,8 @@ from select import select
 import paramiko
 import re
 import logging
-import time
+from time import sleep, time
 from .tty import Terminal
-from datetime import datetime, timedelta
 
 _PROMPT = re.compile('|'.join(Terminal._RE_PAT))
 
@@ -90,14 +89,12 @@ class SecureShell(Terminal):
 
     def read_prompt(self):
         got = []
-        mark_start = datetime.now()
-        mark_end = mark_start + timedelta(seconds=15)
+        timeout = time() + 15.0
 
-        while datetime.now() < mark_end:
-            delta = time.time() - start
-            time.sleep(0.1)
+        while time() < timeout:
+            sleep(0.1)
             rd, wr, err = select([self._chan], [], [], self.SELECT_WAIT)
-            time.sleep(0.05)
+            sleep(0.05)
             if rd:
                 data = self._chan.recv(self.RECVSZ)
                 got.append(data)
