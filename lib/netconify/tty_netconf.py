@@ -128,6 +128,48 @@ class tty_netconf(object):
             pass
         return True
 
+    def stack1(self):
+        """ create vc-ports on the device """
+        cmd = E.command('request virtual-chassis vc-port set pic-slot 0 port 52')
+        try:
+            rsp = self.rpc(etree.tostring(cmd))
+        except:
+            pass
+        return True
+
+    def stack2(self):
+        """ create vc-ports on the device """
+        cmd = E.command('request virtual-chassis vc-port set pic-slot 0 port 53')
+        try:
+            rsp = self.rpc(etree.tostring(cmd))
+        except:
+            pass
+        return True
+
+    def cleanpackages(self):
+        """ remove jpuppet ruby chef ez-stdlib packages """
+        cmd = E.command('request system software delete jpuppet')
+        try:
+            rsp = self.rpc(etree.tostring(cmd))
+        except:
+            pass
+	cmd = E.command('request system software delete ruby')
+        try:
+            rsp = self.rpc(etree.tostring(cmd))
+        except:
+            pass
+        cmd = E.command('request system software delete chef')
+        try:
+            rsp = self.rpc(etree.tostring(cmd))
+        except:
+            pass
+        cmd = E.command('request system software delete junos-ez-stdlib')
+        try:
+            rsp = self.rpc(etree.tostring(cmd))
+        except:
+            pass
+        return True
+
     def enablecluster(self, cluster_id, node):
         """ issue request chassis cluster command """
         cmd = E('set-chassis-cluster-enable',

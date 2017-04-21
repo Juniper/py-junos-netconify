@@ -128,7 +128,22 @@ class netconifyCmdo(object):
                        action='store_true',
                        help='Disable cluster mode on SRX device and reboot')
 
-        # ---------------------------------------------------------------------
+	g.add_argument('--stack_port1',
+                       dest='request_stack_port1',
+                       action='store_true',
+                       help='Create virtual-chassis ports into qfx devices (Port 52)')
+
+	g.add_argument('--stack_port2',
+                       dest='request_stack_port2',
+                       action='store_true',
+                       help='Create virtual-chassis ports into qfx devices (Port 53)')
+	
+	g.add_argument('--clean_automation_packages',
+                       dest='request_clean_automation_packages',
+                       action='store_true',
+                       help='Remove the ruby, jpuppet chef and ez-stdlib packages')
+
+	# ---------------------------------------------------------------------
         # directories
         # ---------------------------------------------------------------------
 
@@ -370,6 +385,18 @@ class netconifyCmdo(object):
             self._push_config()
         if args.qfx_mode is not None:
             self._qfx_mode()
+	
+	if args.request_stack_port1:
+	    self._stack_port1()
+	    return
+
+	if args.request_stack_port2:
+            self._stack_port2()
+            return
+
+	if args.request_clean_automation_packages:
+            self._clean_automation_packages()
+            return
 
     def _srx_cluster(self):
         """ Enable cluster mode on SRX device"""
@@ -398,6 +425,24 @@ class netconifyCmdo(object):
         self._notify('zeroize', 'ZEROIZE device, rebooting')
         self._tty.nc.zeroize()
         self._skip_logout = True
+        self.results['changed'] = True
+
+    def _stack_port1(self):
+	"""Create Virtual Chassis Ports """
+	self._notify('VC-port-52', 'DONE')
+	self._tty.nc.stack1()
+	self.results['changed'] = True
+
+    def _stack_port2(self):
+        """Create Virtual Chassis Ports """
+        self._notify('VC-port-53', 'DONE')
+        self._tty.nc.stack2()
+        self.results['changed'] = True
+
+    def _clean_automation_packages(self):
+        """Remove the ruby jpuppet chef and ez-stdlib packages """
+        self._notify('Remove-automation-packages', 'DONE')
+        self._tty.nc.cleanpackages()
         self.results['changed'] = True
 
     def _shutdown(self):
